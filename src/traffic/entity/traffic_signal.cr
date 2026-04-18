@@ -3,7 +3,7 @@ module Traffic
     def initialize(key : String, x, y, rotation = 0.0_f32)
       super(key, 16, 64, x, y)
       self.rotation = rotation
-      
+
       # Setup a dummy animation so frame_index works for all 4 frames
       add("static", [0, 1, 2, 3], fps: 1)
       play("static")
@@ -30,12 +30,11 @@ module Traffic
       self.frame = 3
     end
 
-    # Assuming frame 3 (Red + Turn Yellow) is the fallback for "Red" 
-    # if no specific Red frame exists, or perhaps it's intended 
+    # Assuming frame 3 (Red + Turn Yellow) is the fallback for "Red"
+    # if no specific Red frame exists, or perhaps it's intended
     # to be used when the other side is Green.
     def show_red
-      self.frame = 3 
+      self.frame = 3
     end
   end
 end
-

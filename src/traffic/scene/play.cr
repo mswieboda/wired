@@ -112,7 +112,7 @@ module Traffic
       # Adjusted based on traffic.json: Row 6,7 is road. Col 7,8 is road.
       vehicle_type = (Random.rand < 0.1) ? VehicleType::Priority : VehicleType::Civilian
       choice = Random.rand(4)
-      
+
       # For initial spawn, we don't know if we need to switch yet.
       # Pathfinding is done AFTER creation.
       new_vehicle = case choice
@@ -146,19 +146,19 @@ module Traffic
       cam_x, cam_y = camera.x, camera.y
       debug_color = GSDL::Color.new(255, 0, 255, 180)
       thickness = 4.0_f32
-      
+
       # Horizontal lanes (Row 6, 7)
       [{"L1", Lane1}, {"L2", Lane2}, {"L3", Lane3}, {"L4", Lane4}].each do |label, offset|
         ly = 6 * TileSize + offset - cam_y
         draw.rect_fill(GSDL::FRect.new(0 - cam_x, ly - thickness/2, 14 * TileSize, thickness), debug_color, 10)
       end
-      
+
       # Vertical lanes (Col 7, 8)
       [{"L1", Lane1}, {"L2", Lane2}, {"L3", Lane3}, {"L4", Lane4}].each do |label, offset|
         lx = 7 * TileSize + offset - cam_x
         draw.rect_fill(GSDL::FRect.new(lx - thickness/2, 0 - cam_y, thickness, 13 * TileSize), debug_color, 10)
       end
-      
+
       draw.scale = {old_scale_x, old_scale_y}
 
       if selected = @selected_vehicle

@@ -49,7 +49,7 @@ module Traffic
       @honk_timer = GSDL::Timer.new(Time::Span.new(seconds: Random.rand(4..8)))
       @honk_timer.start
       @rage_cooldown = GSDL::Timer.new(2.seconds)
-      
+
       @yield_timer = GSDL::Timer.new(5.seconds)
       @blinker_timer = GSDL::Timer.new(0.5.seconds)
       @blinker_timer.start
@@ -303,7 +303,7 @@ module Traffic
 
     private def update_lane_switching(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
       return if @lane_state.switching?
-      
+
       # Find next intersection distance
       next_inter = intersections.select do |inter|
         ix, iy = inter.tile_x * TileSize + TileSize, inter.tile_y * TileSize + TileSize
@@ -338,21 +338,21 @@ module Traffic
         base_coord = 6.0_f32 * TileSize
         current_val = self.y
       end
-      
+
       current_offset = current_val - base_coord
-      
+
       # Required Offset
       req_offset = if @next_action.left?
                      (self.direction.north? || self.direction.east?) ? Lane3 : Lane2
                    else # Straight or Right
                      (self.direction.north? || self.direction.east?) ? Lane4 : Lane1
                    end
-      
+
       if (current_offset - req_offset).abs > 5.0_f32
         # Need to switch
         target_world = base_coord + req_offset
         aggressive = @vehicle_type == VehicleType::Priority
-        
+
         if @lane_state.yielding? || aggressive
           if !aggressive && @yield_timer.done?
             # Timeout: cancel turn and recalculate
@@ -515,7 +515,7 @@ module Traffic
       if @blinker_on && (@next_action.left? || @next_action.right?)
         b_color = GSDL::Color.new(255, 165, 0)
         bx, by = self.x, self.y # Use world center directly
-        
+
         # Determine triangle points based on world coords (Triangle class handles camera)
         case self.direction
         when .east?
@@ -545,7 +545,7 @@ module Traffic
         else # ignore
           p1 = p2 = p3 = {0.0_f32, 0.0_f32}
         end
-        
+
         GSDL::Triangle.new(p1, p2, p3, color: b_color, z_index: z_index + 50).draw(draw)
       end
 

@@ -94,21 +94,17 @@ module Traffic
       
       case choice
       when 0 # Eastbound (Bottom lane of row 3)
-        # Row 3 Y: 3*128. Bottom lane center: 3*128 + 96.
-        # Top-left Y = 3*128 + 96 - 16 = 3*128 + 80.
-        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::East, -128, 3*128 + 80)
+        # Shift up 8px closer to center
+        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::East, -128, 3*128 + 72)
       when 1 # Westbound (Top lane of row 3)
-        # Top lane center: 3*128 + 32.
-        # Top-left Y = 3*128 + 32 - 16 = 3*128 + 16.
-        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::West, 20*128, 3*128 + 16)
+        # Shift down 8px closer to center
+        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::West, 20*128, 3*128 + 24)
       when 2 # Southbound (Left lane of col 4)
-        # Col 4 X: 4*128. Left lane center: 4*128 + 32.
-        # Top-left X = 4*128 + 32 - 32 = 4*128.
-        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::South, 4*128, -128)
+        # Shift right 8px closer to center
+        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::South, 4*128 + 8, -128)
       when 3 # Northbound (Right lane of col 4)
-        # Right lane center: 4*128 + 96.
-        # Top-left X = 4*128 + 96 - 32 = 4*128 + 64.
-        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::North, 4*128 + 64, 11*128)
+        # Shift left 8px closer to center
+        @vehicles << Vehicle.new(vehicle_type, GSDL::Direction::North, 4*128 + 56, 11*128)
       end
     end
 

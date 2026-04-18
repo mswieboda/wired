@@ -18,12 +18,12 @@ module Traffic
     @tile_y : Int32
 
     def initialize(@tile_x, @tile_y, switch_seconds : Int32 = 60)
-      # Position in pixels based on tile coordinates
+      # Position in pixels based on top-left tile of 2x2 intersection
       px = @tile_x * TileSize
       py = @tile_y * TileSize
 
       @switch_interval = switch_seconds.seconds
-      super("signal", px + TileSize - 20, py + 2)
+      super("signal", px + IntersectionSize - 20, py + 2)
       @state = IntersectionSignal::GreenNS
       @state_timer = GSDL::Timer.new(@switch_interval)
       @state_timer.start
@@ -80,27 +80,23 @@ module Traffic
     def clicked?(mx, my)
       px = @tile_x * TileSize
       py = @tile_y * TileSize
-      mx >= px && mx < px + TileSize && my >= py && my < py + TileSize
+      mx >= px && mx < px + IntersectionSize && my >= py && my < py + IntersectionSize
     end
 
     def draw(draw : GSDL::Draw)
-      # Common coordinates for the tile in world space
+      # Common coordinates for the 2x2 block in world space
       px = @tile_x * TileSize
       py = @tile_y * TileSize
 
       # NS Signal (Vertical)
-      # 3/4 (12px) inside right edge, 1/4 (4px) outside.
-      # Right edge is px + TileSize. So ns_x = px + TileSize - 12.
-      ns_x = px + (TileSize - 12.0_f32)
+      # Positioned on the right edge of the 256px block
+      ns_x = px + (IntersectionSize - 12.0_f32)
       ns_y = py + 16.0_f32
 
       # EW Signal (Horizontal)
-      # 3/4 (12px) inside bottom edge, 1/4 (4px) outside.
-      # Bottom edge is py + TileSize. Signal "height" is 16.
-      # Bottom of signal is ew_center_y + 8.
-      # So ew_center_y + 8 = py + TileSize + 4 => ew_center_y = py + TileSize - 4.
+      # Positioned on the bottom edge of the 256px block
       ew_center_x = px + 24.0_f32
-      ew_center_y = py + (TileSize - 4.0_f32)
+      ew_center_y = py + (IntersectionSize - 4.0_f32)
 
       ew_rect_x = ew_center_x - 8.0_f32
       ew_rect_y = ew_center_y - 32.0_f32
@@ -141,10 +137,8 @@ module Traffic
       when IntersectionSignal::GreenNS
         draw.circle_fill(ns_x + 8, ns_y + 52, 6, glow_color, z_index + 1)
       when IntersectionSignal::GreenNSLeft
-        # Left-turn indicator is usually a separate light or a different color/shape
-        # Rendering a small arrow or just a dedicated green glow for now
+        # Left-turn indicator
         draw.circle_fill(ns_x + 8, ns_y + 52, 7, left_glow_color, z_index + 1)
-        # Small "arrow" indicator using a triangle/rect
         draw.rect_fill(GSDL::FRect.new(ns_x + 4, ns_y + 48, 8, 8), left_glow_color, z_index + 2)
       when IntersectionSignal::YellowNS
         draw.circle_fill(ns_x + 8, ns_y + 32, 6, glow_color, z_index + 1)

@@ -4,12 +4,6 @@ module Traffic
     Priority
   end
 
-  module PatienceThresholds
-    ANXIOUS    = 5.0_f32
-    FRUSTRATED = 20.0_f32
-    ROAD_RAGE  = 35.0_f32
-  end
-
   enum IntersectionAction
     Straight
     Right
@@ -113,18 +107,18 @@ module Traffic
 
       actions.each do |action|
         next_inter = intersections.select do |inter|
-          ix = inter.tile_x * TileSize + (TileSize / 2.0_f32)
-          iy = inter.tile_y * TileSize + (TileSize / 2.0_f32)
+          ix = inter.tile_x * TileSize + TileSize
+          iy = inter.tile_y * TileSize + TileSize
           case cdir
-          when .east?  then ix > cx && (iy - cy).abs < (TileSize / 2.0_f32)
-          when .west?  then ix < cx && (iy - cy).abs < (TileSize / 2.0_f32)
-          when .north? then iy < cy && (ix - cx).abs < (TileSize / 2.0_f32)
-          when .south? then iy > cy && (ix - cx).abs < (TileSize / 2.0_f32)
+          when .east?  then ix > cx && (iy - cy).abs < TileSize
+          when .west?  then ix < cx && (iy - cy).abs < TileSize
+          when .north? then iy < cy && (ix - cx).abs < TileSize
+          when .south? then iy > cy && (ix - cx).abs < TileSize
           else false
           end
         end.min_by? do |inter|
-          ix = inter.tile_x * TileSize + (TileSize / 2.0_f32)
-          iy = inter.tile_y * TileSize + (TileSize / 2.0_f32)
+          ix = inter.tile_x * TileSize + TileSize
+          iy = inter.tile_y * TileSize + TileSize
           (ix - cx).abs + (iy - cy).abs
         end
 
@@ -139,25 +133,22 @@ module Traffic
         if action.right? || action.left?
           case cdir
           when .east?
-            turn_x = inter_px + (action.right? ? Lane1 : Lane4)
+            turn_x = inter_px + (action.right? ? Lane4 : Lane1)
             cdir = action.right? ? GSDL::Direction::South : GSDL::Direction::North
           when .south?
             turn_y = inter_py + (action.right? ? Lane1 : Lane4)
             cdir = action.right? ? GSDL::Direction::West : GSDL::Direction::East
           when .west?
-            turn_x = inter_px + (action.right? ? Lane4 : Lane1)
+            turn_x = inter_px + (action.right? ? Lane1 : Lane4)
             cdir = action.right? ? GSDL::Direction::North : GSDL::Direction::South
           when .north?
             turn_y = inter_py + (action.right? ? Lane4 : Lane1)
             cdir = action.right? ? GSDL::Direction::East : GSDL::Direction::West
           end
         else
-
-          turn_x = inter_px + (TileSize / 2.0_f32)
-          turn_y = inter_py + (TileSize / 2.0_f32)
           case cdir
-          when .east?, .west?  then turn_y = cy
-          when .north?, .south? then turn_x = cx
+          when .east?, .west?  then turn_x = inter_px + TileSize
+          when .north?, .south? then turn_y = inter_py + TileSize
           end
         end
 
@@ -211,8 +202,7 @@ module Traffic
 
       @waiting = false
 
-      # Check for collisions with other vehicles (Wreck state)
-      # Skip if in safety mode (just after a turn)
+      # Check for collisions with other vehicles
       unless @safety_timer.try(&.running?)
         all_vehicles.each do |other|
           next if other == self
@@ -236,7 +226,6 @@ module Traffic
       end
 
       unless @waiting
-        # Intersection check (incorporating red lights into halting)
         check_intersections(intersections)
       end
 
@@ -245,10 +234,7 @@ module Traffic
       end
 
       unless @waiting
-        # Speed adjustment for preparing to turn
         target_speed = @next_action.straight? ? @original_speed : @original_speed * 0.5_f32
-
-        # Smoothly interpolate speed
         if @speed < target_speed
           @speed += 400.0_f32 * dt
           @speed = target_speed if @speed > target_speed
@@ -257,10 +243,8 @@ module Traffic
           @speed = target_speed if @speed < target_speed
         end
 
-        # Basic movement
         dx = 0.0_f32
         dy = 0.0_f32
-
         case self.direction
         when .east?  then dx = 1.0_f32
         when .west?  then dx = -1.0_f32
@@ -277,24 +261,17 @@ module Traffic
     private def update_frustration(dt : Float32)
       if @waiting
         @frustration += dt * 2.0
-
-        # Audio triggers for state transitions
         if road_rage? && !@rage_cooldown.started?
           GSDL::AudioManager.get("rage_trigger").play
           @rage_cooldown.start
         end
-
-        # Honking ONLY when frustrated (Orange)
         if frustrated? && @honk_timer.done?
             GSDL::AudioManager.get("honk").play
             @honk_timer.duration = Time::Span.new(seconds: Random.rand(4..8))
             @honk_timer.restart
         end
       else
-        # Gradually calm down when moving
-        if road_rage? && @rage_cooldown.running?
-          # Do nothing, wait for cooldown
-        else
+        unless road_rage? && @rage_cooldown.running?
           @frustration -= dt * 8.0
           @frustration = 0.0 if @frustration < 0
         end
@@ -310,7 +287,6 @@ module Traffic
     end
 
     private def handle_turns(intersections : Array(Intersection), all_vehicles : Array(Vehicle))
-      # Center point of the vehicle
       check_x = self.x + width / 2.0_f32
       check_y = self.y + height / 2.0_f32
 
@@ -320,7 +296,6 @@ module Traffic
         if current_inter != @last_intersection
           @last_intersection = current_inter
 
-          # Only proceed if we have an action to perform
           if @next_action.right? || @next_action.left?
             inter_px = current_inter.tile_x * TileSize
             inter_py = current_inter.tile_y * TileSize
@@ -329,111 +304,73 @@ module Traffic
             new_dir = self.direction
             new_x = self.x
             new_y = self.y
-
             threshold = ThresholdTurn
 
             if @next_action.right?
               case self.direction
-              when .east?  # East -> South (Lane X=Lane1)
-                target_x = inter_px + Lane1
-                if (self.x - target_x).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::South
-                  new_x = target_x
-                end
-              when .south? # South -> West (Lane Y=Lane1)
-                target_y = inter_py + Lane1
-                if (self.y - target_y).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::West
-                  new_y = target_y
-                end
-              when .west?  # West -> North (Lane X=Lane4)
+              when .east? 
                 target_x = inter_px + Lane4
                 if (self.x - target_x).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::North
-                  new_x = target_x
+                  can_turn = true; new_dir = GSDL::Direction::South; new_x = target_x
                 end
-              when .north? # North -> East (Lane Y=Lane4)
+              when .south?
+                target_y = inter_py + Lane1
+                if (self.y - target_y).abs < threshold
+                  can_turn = true; new_dir = GSDL::Direction::West; new_y = target_y
+                end
+              when .west?
+                target_x = inter_px + Lane1
+                if (self.x - target_x).abs < threshold
+                  can_turn = true; new_dir = GSDL::Direction::North; new_x = target_x
+                end
+              when .north?
                 target_y = inter_py + Lane4
                 if (self.y - target_y).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::East
-                  new_y = target_y
+                  can_turn = true; new_dir = GSDL::Direction::East; new_y = target_y
                 end
-              else # ignore others
+              else # ignore
               end
             else # Left turn
               case self.direction
-              when .east?  # East -> North (Lane X=Lane4)
-                target_x = inter_px + Lane4
-                if (self.x - target_x).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::North
-                  new_x = target_x
-                end
-              when .south? # South -> East (Lane Y=Lane4)
-                target_y = inter_py + Lane4
-                if (self.y - target_y).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::East
-                  new_y = target_y
-                end
-              when .west?  # West -> South (Lane X=Lane1)
+              when .east?
                 target_x = inter_px + Lane1
                 if (self.x - target_x).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::South
-                  new_x = target_x
+                  can_turn = true; new_dir = GSDL::Direction::North; new_x = target_x
                 end
-              when .north? # North -> West (Lane Y=Lane1)
+              when .south?
+                target_y = inter_py + Lane4
+                if (self.y - target_y).abs < threshold
+                  can_turn = true; new_dir = GSDL::Direction::East; new_y = target_y
+                end
+              when .west?
+                target_x = inter_px + Lane4
+                if (self.x - target_x).abs < threshold
+                  can_turn = true; new_dir = GSDL::Direction::South; new_x = target_x
+                end
+              when .north?
                 target_y = inter_py + Lane1
                 if (self.y - target_y).abs < threshold
-                  can_turn = true
-                  new_dir = GSDL::Direction::West
-                  new_y = target_y
+                  can_turn = true; new_dir = GSDL::Direction::West; new_y = target_y
                 end
-              else # ignore others
+              else # ignore
               end
             end
 
             if can_turn
-              # Safety check: would we collide immediately if we turned?
-              # Temporarily switch direction and check collisions
-              old_dir = self.direction
-              old_x = self.x
-              old_y = self.y
-
-              self.direction = new_dir
-              self.x = new_x
-              self.y = new_y
-
-              # Check if new position overlaps any vehicle (including its look_ahead_box for lane integrity)
-              collision = all_vehicles.any? do |other|
-                next false if other == self
-                self.collides?(other) || other.look_ahead_box.overlaps?(self.collision_box)
-              end
-
+              old_dir, old_x, old_y = self.direction, self.x, self.y
+              self.direction, self.x, self.y = new_dir, new_x, new_y
+              collision = all_vehicles.any? { |o| o != self && (self.collides?(o) || o.look_ahead_box.overlaps?(self.collision_box)) }
               if collision
-                # Revert turn if it would cause immediate collision
-                self.direction = old_dir
-                self.x = old_x
-                self.y = old_y
-                # Keep @last_intersection so we don't try again for THIS intersection
+                self.direction, self.x, self.y = old_dir, old_x, old_y
               else
-                # Success!
                 @next_action = path.shift? || IntersectionAction::Straight
                 @safety_timer = GSDL::Timer.new(0.5.seconds)
                 @safety_timer.try(&.start)
               end
             else
-                # Didn't reach turn point yet, reset last_intersection so we check again next frame
                 @last_intersection = nil
             end
           elsif @next_action.straight?
-            # We already reached the intersection, we are going straight.
-            # Pop the next action for the NEXT intersection.
             @next_action = path.shift? || IntersectionAction::Straight
           end
         end
@@ -443,13 +380,9 @@ module Traffic
     end
 
     private def check_intersections(intersections)
-      # Detection box in front of the vehicle
       look_ahead = 40.0_f32
-
       check_x = self.x + width / 2.0_f32
       check_y = self.y + height / 2.0_f32
-
-      # Check if already inside an intersection
       is_inside_intersection = intersections.any? { |inter| inter.clicked?(check_x, check_y) }
 
       case self.direction
@@ -457,96 +390,46 @@ module Traffic
       when .west?  then check_x -= look_ahead
       when .north? then check_y -= look_ahead
       when .south? then check_y += look_ahead
-      else # ignore others
+      else # ignore
       end
 
       intersections.each do |inter|
         if inter.clicked?(check_x, check_y)
-          # If already inside, don't stop
           next if is_inside_intersection
-
-          # Priority and Road Rage vehicles ignore signals
           next if road_rage? || @vehicle_type == VehicleType::Priority
-
           case self.direction
           when .north?, .south?
-            # Vertical traffic: stop if signal is GreenEW, GreenEWLeft, or YellowEW (meaning RedNS)
             case inter.state
-            when IntersectionSignal::GreenEW, IntersectionSignal::GreenEWLeft, IntersectionSignal::YellowEW
-              @waiting = true
-              return
-            when IntersectionSignal::GreenNS
-              # Straight/Right allowed, Left must wait
-              if @next_action.left?
-                @waiting = true
-                return
-              end
-            when IntersectionSignal::GreenNSLeft
-              # Left allowed, Straight/Right must wait (Coordination phase)
-              unless @next_action.left?
-                @waiting = true
-                return
-              end
-            when IntersectionSignal::YellowNS
-              # Everyone stops
-              @waiting = true
-              return
+            when .green_ew?, .green_ew_left?, .yellow_ew? then @waiting = true; return
+            when .green_ns? then ( @waiting = true; return ) if @next_action.left?
+            when .green_ns_left? then ( @waiting = true; return ) unless @next_action.left?
+            when .yellow_ns? then @waiting = true; return
             end
           when .east?, .west?
-            # Horizontal traffic: stop if signal is GreenNS, GreenNSLeft, or YellowNS (meaning RedEW)
             case inter.state
-            when IntersectionSignal::GreenNS, IntersectionSignal::GreenNSLeft, IntersectionSignal::YellowNS
-              @waiting = true
-              return
-            when IntersectionSignal::GreenEW
-              # Straight/Right allowed, Left must wait
-              if @next_action.left?
-                @waiting = true
-                return
-              end
-            when IntersectionSignal::GreenEWLeft
-              # Left allowed, Straight/Right must wait
-              unless @next_action.left?
-                @waiting = true
-                return
-              end
-            when IntersectionSignal::YellowEW
-              # Everyone stops
-              @waiting = true
-              return
+            when .green_ns?, .green_ns_left?, .yellow_ns? then @waiting = true; return
+            when .green_ew? then ( @waiting = true; return ) if @next_action.left?
+            when .green_ew_left? then ( @waiting = true; return ) unless @next_action.left?
+            when .yellow_ew? then @waiting = true; return
             end
-          else # ignore others
+          else # ignore
           end
         end
       end
     end
 
     def off_screen?
-      self.x < -TileSize || self.x > (20 * TileSize + TileSize) || self.y < -TileSize || self.y > (11 * TileSize + TileSize)
+      self.x < -IntersectionSize || self.x > (14 * TileSize + IntersectionSize) || self.y < -IntersectionSize || self.y > (13 * TileSize + IntersectionSize)
     end
 
     def draw(draw : GSDL::Draw)
-      old_scale_x = draw.current_scale_x
-      old_scale_y = draw.current_scale_y
-
+      old_scale_x, old_scale_y = draw.current_scale_x, draw.current_scale_y
       draw.scale = GSDL::Game.camera.zoom
-
-      cam_x = GSDL::Game.camera.x
-      cam_y = GSDL::Game.camera.y
-
+      cam_x, cam_y = GSDL::Game.camera.x, GSDL::Game.camera.y
       flip = self.direction.west? ? GSDL::TileMap::Flip::Horizontal : GSDL::TileMap::Flip::None
-
-      # Draw using directional texture and its actual size
       tex = GSDL::TextureManager.get(current_texture_key)
       tex_size = tex.size
-
-      tint_color = if @wrecked
-                     GSDL::Color.new(40, 40, 40, 255)
-                   elsif @vehicle_type == VehicleType::Priority
-                     GSDL::Color.new(0, 0, 255, 224)
-                   else
-                     GSDL::Color::White
-                   end
+      tint_color = @wrecked ? GSDL::Color.new(40, 40, 40) : (@vehicle_type == VehicleType::Priority ? GSDL::Color.new(0, 0, 255, 224) : GSDL::Color::White)
 
       draw.texture(
         texture: tex,
@@ -556,36 +439,16 @@ module Traffic
         z_index: z_index
       )
 
-      # Draw frustration bar above the vehicle
       unless @wrecked || patient?
-        bar_w = 40.0_f32
-        bar_h = 6.0_f32
+        bar_w, bar_h = 40.0_f32, 6.0_f32
         bar_x = self.x - cam_x + (tex_size[0] / 2.0_f32) - (bar_w / 2.0_f32)
         bar_y = self.y - cam_y - 12.0_f32
-
-        # Background
         draw.rect_fill(GSDL::FRect.new(bar_x, bar_y, bar_w, bar_h), GSDL::Color.new(30, 30, 30, 150), z_index + 1)
-
-        # Foreground
         percent = Math.min(1.0_f32, @frustration / PatienceThresholds::ROAD_RAGE)
-        color = if road_rage?
-                  GSDL::Color.new(255, 50, 50, 255) # Red
-                elsif frustrated?
-                  GSDL::Color.new(255, 120, 50, 255) # Orange
-                elsif anxious?
-                  GSDL::Color.new(255, 255, 50, 255) # Yellow
-                else
-                  GSDL::Color.new(100, 255, 100, 255) # Green
-                end
+        color = road_rage? ? GSDL::Color.new(255, 50, 50) : (frustrated? ? GSDL::Color.new(255, 120, 50) : (anxious? ? GSDL::Color.new(255, 255, 50) : GSDL::Color.new(100, 255, 100)))
         draw.rect_fill(GSDL::FRect.new(bar_x, bar_y, bar_w * percent, bar_h), color, z_index + 2)
-
-        # Exclamation mark for Road Rage
-        if road_rage?
-          # Just a small red box or something as placeholder for "icon"
-          draw.rect_fill(GSDL::FRect.new(bar_x + bar_w + 4, bar_y - 4, 8, 14), GSDL::Color.new(255, 0, 0, 255), z_index + 3)
-        end
+        draw.rect_fill(GSDL::FRect.new(bar_x + bar_w + 4, bar_y - 4, 8, 14), GSDL::Color.new(255, 0, 0), z_index + 3) if road_rage?
       end
-
       draw.scale = {old_scale_x, old_scale_y}
     end
   end

@@ -20,7 +20,7 @@ module Traffic
       camera.type = GSDL::Camera::Type::Manual
       camera.zoom = 0.5_f32
       camera.set_boundary(@map)
-      camera.speed = 1000.0_f32 # Faster camera for larger map
+      camera.speed = 1000.0_f32
 
       @spawn_timer = GSDL::Timer.new(Random.rand(@spawn_interval_min..@spawn_interval_max).seconds)
       @spawn_timer.start
@@ -109,64 +109,56 @@ module Traffic
     end
 
     private def spawn_vehicle
-      # 4 spawn points based on current map:
-      # Right-hand traffic.
-      # 4 lanes (2 each way). 
-
+      # Adjusted based on traffic.json: Row 6,7 is road. Col 7,8 is road.
       vehicle_type = (Random.rand < 0.1) ? VehicleType::Priority : VehicleType::Civilian
       choice = Random.rand(4)
-
-      # Determine if we want to turn left at some point
       will_turn_left = Random.rand < 0.2
 
       new_vehicle = case choice
-                    when 0 # Eastbound (Bottom lanes of row 3)
+                    when 0 # Eastbound (Bottom lanes of the horizontal road)
                       y_offset = will_turn_left ? Lane3 : Lane4
-                      Vehicle.new(vehicle_type, GSDL::Direction::East, -TileSize, 3 * TileSize + y_offset)
-                    when 1 # Westbound (Top lanes of row 3)
+                      Vehicle.new(vehicle_type, GSDL::Direction::East, -IntersectionSize, 6 * TileSize + y_offset)
+                    when 1 # Westbound (Top lanes of the horizontal road)
                       y_offset = will_turn_left ? Lane2 : Lane1
-                      Vehicle.new(vehicle_type, GSDL::Direction::West, 20 * TileSize, 3 * TileSize + y_offset)
-                    when 2 # Southbound (Left lanes of col 4)
+                      Vehicle.new(vehicle_type, GSDL::Direction::West, 14 * TileSize + IntersectionSize, 6 * TileSize + y_offset)
+                    when 2 # Southbound (Left lanes of the vertical road)
                       x_offset = will_turn_left ? Lane2 : Lane1
-                      Vehicle.new(vehicle_type, GSDL::Direction::South, 4 * TileSize + x_offset, -TileSize)
-                    when 3 # Northbound (Right lanes of col 4)
+                      Vehicle.new(vehicle_type, GSDL::Direction::South, 7 * TileSize + x_offset, -IntersectionSize)
+                    when 3 # Northbound (Right lanes of the vertical road)
                       x_offset = will_turn_left ? Lane3 : Lane4
-                      Vehicle.new(vehicle_type, GSDL::Direction::North, 4 * TileSize + x_offset, 11 * TileSize)
+                      Vehicle.new(vehicle_type, GSDL::Direction::North, 7 * TileSize + x_offset, 13 * TileSize + IntersectionSize)
                     end
 
       if new_vehicle
-        # Precalculate path
         current_dir = new_vehicle.direction
         current_x = new_vehicle.x
         current_y = new_vehicle.y
 
-        # Safety limit for path length
         10.times do
-          # Find next intersection in direction
           next_inter = @intersections.select do |inter|
-            ix = inter.tile_x * TileSize
-            iy = inter.tile_y * TileSize
+            ix = inter.tile_x * TileSize + TileSize
+            iy = inter.tile_y * TileSize + TileSize
             case current_dir
-            when .east?  then ix > current_x && (iy - current_y).abs < (TileSize / 2.0_f32)
-            when .west?  then ix < current_x && (iy - current_y).abs < (TileSize / 2.0_f32)
-            when .north? then iy < current_y && (ix - current_x).abs < (TileSize / 2.0_f32)
-            when .south? then iy > current_y && (ix - current_x).abs < (TileSize / 2.0_f32)
+            when .east?  then ix > current_x && (iy - current_y).abs < TileSize
+            when .west?  then ix < current_x && (iy - current_y).abs < TileSize
+            when .north? then iy < current_y && (ix - current_x).abs < TileSize
+            when .south? then iy > current_y && (ix - current_x).abs < TileSize
             else false
             end
           end.min_by? do |inter|
-            ix = inter.tile_x * TileSize
-            iy = inter.tile_y * TileSize
+            ix = inter.tile_x * TileSize + TileSize
+            iy = inter.tile_y * TileSize + TileSize
             (ix - current_x).abs + (iy - current_y).abs
           end
 
           break unless next_inter
 
           roll = Random.rand
-          if will_turn_left && roll < 0.4 # higher chance to pick the turn we planned for
+          if will_turn_left && roll < 0.4
             new_vehicle.path << IntersectionAction::Left
-            will_turn_left = false # Turn performed
-            current_x = next_inter.tile_x * TileSize
-            current_y = next_inter.tile_y * TileSize
+            will_turn_left = false
+            current_x = next_inter.tile_x * TileSize + TileSize
+            current_y = next_inter.tile_y * TileSize + TileSize
             current_dir = case current_dir
                           when .east?  then GSDL::Direction::North
                           when .west?  then GSDL::Direction::South
@@ -176,8 +168,8 @@ module Traffic
                           end
           elsif roll < 0.2
             new_vehicle.path << IntersectionAction::Right
-            current_x = next_inter.tile_x * TileSize
-            current_y = next_inter.tile_y * TileSize
+            current_x = next_inter.tile_x * TileSize + TileSize
+            current_y = next_inter.tile_y * TileSize + TileSize
             current_dir = case current_dir
                           when .east?  then GSDL::Direction::South
                           when .west?  then GSDL::Direction::North
@@ -187,18 +179,13 @@ module Traffic
                           end
           else
             new_vehicle.path << IntersectionAction::Straight
-            current_x = next_inter.tile_x * TileSize
-            current_y = next_inter.tile_y * TileSize
+            current_x = next_inter.tile_x * TileSize + TileSize
+            current_y = next_inter.tile_y * TileSize + TileSize
           end
         end
 
-        # Initialize first action
         new_vehicle.next_action = new_vehicle.path.shift? || IntersectionAction::Straight
-
-        # Safety check: do not spawn if overlapping another vehicle
-        if @vehicles.none? { |v| v.collides?(new_vehicle) }
-          @vehicles << new_vehicle
-        end
+        @vehicles << new_vehicle if @vehicles.none? { |v| v.collides?(new_vehicle) }
       end
     end
 
@@ -206,23 +193,36 @@ module Traffic
       @map.draw(draw)
       @intersections.each(&.draw(draw))
 
-      # Draw path overlay for selected vehicle
-      if selected = @selected_vehicle
-        old_scale_x = draw.current_scale_x
-        old_scale_y = draw.current_scale_y
-        draw.scale = camera.zoom
+      # Detailed Magenta Debug Lines
+      old_scale_x, old_scale_y = draw.current_scale_x, draw.current_scale_y
+      draw.scale = camera.zoom
+      cam_x, cam_y = camera.x, camera.y
+      debug_color = GSDL::Color.new(255, 0, 255, 180)
+      thickness = 4.0_f32
+      
+      # Horizontal lanes (Row 6, 7)
+      [{"L1", Lane1}, {"L2", Lane2}, {"L3", Lane3}, {"L4", Lane4}].each do |label, offset|
+        ly = 6 * TileSize + offset - cam_y
+        draw.rect_fill(GSDL::FRect.new(0 - cam_x, ly - thickness/2, 14 * TileSize, thickness), debug_color, 10)
+        # draw.text_engine.draw(label, 10 - cam_x, ly - 20, GSDL::Color::White, 10) # Using HUD or simple draw.text if available
+      end
+      
+      # Vertical lanes (Col 7, 8)
+      [{"L1", Lane1}, {"L2", Lane2}, {"L3", Lane3}, {"L4", Lane4}].each do |label, offset|
+        lx = 7 * TileSize + offset - cam_x
+        draw.rect_fill(GSDL::FRect.new(lx - thickness/2, 0 - cam_y, thickness, 13 * TileSize), debug_color, 10)
+      end
+      
+      draw.scale = {old_scale_x, old_scale_y}
 
+      if selected = @selected_vehicle
+        old_sx, old_sy = draw.current_scale_x, draw.current_scale_y
+        draw.scale = camera.zoom
         segments = selected.project_path_segments(@intersections)
         segments.each do |seg|
-          # Rects are world space, need camera conversion
-          draw.rect_fill(
-            GSDL::FRect.new(seg.x - camera.x, seg.y - camera.y, seg.w, seg.h),
-            GSDL::Color.new(0, 100, 255, 128),
-            -5 # Between map and vehicles
-          )
+          draw.rect_fill(GSDL::FRect.new(seg.x - camera.x, seg.y - camera.y, seg.w, seg.h), GSDL::Color.new(0, 100, 255, 128), -5)
         end
-
-        draw.scale = {old_scale_x, old_scale_y}
+        draw.scale = {old_sx, old_sy}
       end
 
       @vehicles.each(&.draw(draw))

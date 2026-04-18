@@ -1,14 +1,22 @@
 module Traffic
-  TileSize = 256.0_f32
+  TileSize = 128.0_f32
+  IntersectionSize = 2 * TileSize
   
-  # Proportional Lane Offsets (4 lanes total)
-  Lane1 = 0.125_f32 * TileSize # Outer
-  Lane2 = 0.375_f32 * TileSize # Inner / Turn
-  Lane3 = 0.625_f32 * TileSize # Inner / Turn
-  Lane4 = 0.875_f32 * TileSize # Outer
+  # Lane center offsets from road start (0 to 256)
+  Lane1 = 32.0_f32
+  Lane2 = 96.0_f32
+  Lane3 = 160.0_f32
+  Lane4 = 224.0_f32
   
   # Trigger/Detection Thresholds
-  ThresholdTurn   = 0.1_f32 * TileSize
+  ThresholdTurn   = 0.125_f32 * TileSize # 16px
   LookAheadDist   = 0.15_f32 * TileSize
   SignalCheckDist = 0.25_f32 * TileSize
+  
+  # Patience
+  module PatienceThresholds
+    ANXIOUS    = 5.0_f32
+    FRUSTRATED = 20.0_f32
+    ROAD_RAGE  = 35.0_f32
+  end
 end

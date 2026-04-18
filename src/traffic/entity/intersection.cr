@@ -17,7 +17,7 @@ module Traffic
     @tile_x : Int32
     @tile_y : Int32
 
-    def initialize(@tile_x, @tile_y, switch_seconds : Int32 = 60)
+    def initialize(@tile_x, @tile_y, switch_seconds : Int32 = 10)
       # Position in pixels based on top-left tile of 2x2 intersection
       px = @tile_x * TileSize
       py = @tile_y * TileSize

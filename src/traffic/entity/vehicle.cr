@@ -361,10 +361,11 @@ module Traffic
     end
 
     private def check_intersections(intersections)
-      look_ahead = 16.0_f32 # Reduced look-ahead as we are measuring from front bumper
+      # committed if center of car is inside
+      is_committed = intersections.any? { |inter| inter.clicked?(self.x, self.y) }
+      
+      look_ahead = 16.0_f32 # Distance ahead of bumper to "see" the signal
       check_x, check_y = self.x, self.y
-      is_inside_intersection = intersections.any? { |inter| inter.clicked?(check_x, check_y) }
-
       case self.direction
       when .east?  then check_x += (width / 2.0_f32) + look_ahead
       when .west?  then check_x -= (width / 2.0_f32) + look_ahead
@@ -375,7 +376,7 @@ module Traffic
 
       intersections.each do |inter|
         if inter.clicked?(check_x, check_y)
-          next if is_inside_intersection
+          next if is_committed
           next if road_rage? || @vehicle_type == VehicleType::Priority
           case self.direction
           when .north?, .south?

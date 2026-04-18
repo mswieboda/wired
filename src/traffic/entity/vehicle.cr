@@ -96,6 +96,100 @@ module Traffic
       end
     end
 
+    def clicked?(mx : Float32, my : Float32) : Bool
+      box = collision_box
+      mx >= box.x && mx < box.x + box.w && my >= box.y && my < box.y + box.h
+    end
+
+    def project_path_segments(intersections : Array(Intersection)) : Array(GSDL::FRect)
+      segments = [] of GSDL::FRect
+      thickness = 8.0_f32
+      
+      cx = self.x + width / 2.0_f32
+      cy = self.y + height / 2.0_f32
+      
+      cdir = self.direction
+      actions = [@next_action] + path.to_a
+
+      actions.each do |action|
+        next_inter = intersections.select do |inter|
+          ix = inter.tile_x * 128.0_f32 + 64.0_f32
+          iy = inter.tile_y * 128.0_f32 + 64.0_f32
+          case cdir
+          when .east?  then ix > cx && (iy - cy).abs < 64
+          when .west?  then ix < cx && (iy - cy).abs < 64
+          when .north? then iy < cy && (ix - cx).abs < 64
+          when .south? then iy > cy && (ix - cx).abs < 64
+          else false
+          end
+        end.min_by? do |inter|
+          ix = inter.tile_x * 128.0_f32 + 64.0_f32
+          iy = inter.tile_y * 128.0_f32 + 64.0_f32
+          (ix - cx).abs + (iy - cy).abs
+        end
+
+        break unless next_inter
+
+        inter_px = next_inter.tile_x * 128.0_f32
+        inter_py = next_inter.tile_y * 128.0_f32
+        
+        turn_x = cx
+        turn_y = cy
+        
+        if action.right?
+          case cdir
+          when .east?
+            turn_x = inter_px + 32.0_f32
+            cdir = GSDL::Direction::South
+          when .south?
+            turn_y = inter_py + 32.0_f32
+            cdir = GSDL::Direction::West
+          when .west?
+            turn_x = inter_px + 96.0_f32
+            cdir = GSDL::Direction::North
+          when .north?
+            turn_y = inter_py + 96.0_f32
+            cdir = GSDL::Direction::East
+          end
+        else
+          turn_x = inter_px + 64.0_f32
+          turn_y = inter_py + 64.0_f32
+          case cdir
+          when .east?, .west?  then turn_y = cy
+          when .north?, .south? then turn_x = cx
+          end
+        end
+
+        seg_x = (cx < turn_x ? cx : turn_x).to_f32 - (thickness / 2.0_f32)
+        seg_y = (cy < turn_y ? cy : turn_y).to_f32 - (thickness / 2.0_f32)
+        seg_w = (cx - turn_x).abs.to_f32 + thickness
+        seg_h = (cy - turn_y).abs.to_f32 + thickness
+        
+        segments << GSDL::FRect.new(seg_x, seg_y, seg_w, seg_h)
+        
+        cx = turn_x
+        cy = turn_y
+      end
+      
+      end_dist = 2000.0_f32
+      final_x = cx
+      final_y = cy
+      case cdir
+      when .east?  then final_x += end_dist
+      when .west?  then final_x -= end_dist
+      when .north? then final_y -= end_dist
+      when .south? then final_y += end_dist
+      end
+      
+      seg_x = (cx < final_x ? cx : final_x).to_f32 - (thickness / 2.0_f32)
+      seg_y = (cy < final_y ? cy : final_y).to_f32 - (thickness / 2.0_f32)
+      seg_w = (cx - final_x).abs.to_f32 + thickness
+      seg_h = (cy - final_y).abs.to_f32 + thickness
+      segments << GSDL::FRect.new(seg_x, seg_y, seg_w, seg_h)
+
+      segments
+    end
+
     def update(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
       if @vehicle_type == VehicleType::Priority
         decay_rate = 1.0_f32

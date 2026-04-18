@@ -3,6 +3,7 @@ module Traffic
     @map : GSDL::TileMap
     @intersections : Array(Intersection) = [] of Intersection
     @vehicles : Array(Vehicle) = [] of Vehicle
+    @selected_vehicle : Vehicle? = nil
 
     @spawn_timer : GSDL::Timer
     @spawn_interval_min : Float32 = 0.5
@@ -63,15 +64,22 @@ module Traffic
         camera.zoom = 2_f32 if camera.zoom > 2_f32
       end
 
-      # Toggle intersections on click
+      # Toggle intersections or select vehicles on click
       if GSDL::Mouse.just_pressed?(GSDL::Mouse::ButtonLeft)
         mx, my = GSDL::Mouse.position
         world_mx = (mx / camera.zoom) + camera.x
         world_my = (my / camera.zoom) + camera.y
 
-        @intersections.each do |intersection|
-          if intersection.clicked?(world_mx, world_my)
-            intersection.toggle
+        clicked_vehicle = @vehicles.find(&.clicked?(world_mx, world_my))
+
+        if clicked_vehicle
+          @selected_vehicle = clicked_vehicle
+        else
+          clicked_intersection = @intersections.find(&.clicked?(world_mx, world_my))
+          if clicked_intersection
+            clicked_intersection.toggle
+          else
+            @selected_vehicle = nil
           end
         end
       end
@@ -81,6 +89,13 @@ module Traffic
 
       @vehicles.each(&.update(dt, @intersections, @vehicles))
       @vehicles.reject!(&.off_screen?)
+
+      # Deselect if selected vehicle is gone or wrecked
+      if selected = @selected_vehicle
+        unless @vehicles.includes?(selected) && !selected.wrecked?
+          @selected_vehicle = nil
+        end
+      end
 
       camera.update(dt)
     end
@@ -177,6 +192,26 @@ module Traffic
     def draw(draw : GSDL::Draw)
       @map.draw(draw)
       @intersections.each(&.draw(draw))
+
+      # Draw path overlay for selected vehicle
+      if selected = @selected_vehicle
+        old_scale_x = draw.current_scale_x
+        old_scale_y = draw.current_scale_y
+        draw.scale = camera.zoom
+
+        segments = selected.project_path_segments(@intersections)
+        segments.each do |seg|
+          # Rects are world space, need camera conversion
+          draw.rect_fill(
+            GSDL::FRect.new(seg.x - camera.x, seg.y - camera.y, seg.w, seg.h),
+            GSDL::Color.new(0, 100, 255, 128),
+            -5 # Between map and vehicles
+          )
+        end
+
+        draw.scale = {old_scale_x, old_scale_y}
+      end
+
       @vehicles.each(&.draw(draw))
     end
   end

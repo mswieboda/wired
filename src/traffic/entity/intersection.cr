@@ -23,7 +23,7 @@ module Traffic
     end
 
     def update(dt : Float32)
-      if @state_timer.running? && @state_timer.done?
+      if @state_timer.done?
         next_state
       end
     end
@@ -46,10 +46,10 @@ module Traffic
       case @state
       when IntersectionSignal::GreenNS
         @state = IntersectionSignal::YellowNS
-        @state_timer.start
+        @state_timer.restart
       when IntersectionSignal::GreenEW
         @state = IntersectionSignal::YellowEW
-        @state_timer.start
+        @state_timer.restart
       else
         # Transitioning, ignore
       end

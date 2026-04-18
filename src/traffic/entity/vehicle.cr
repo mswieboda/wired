@@ -514,14 +514,39 @@ module Traffic
       # Blinkers
       if @blinker_on && (@next_action.left? || @next_action.right?)
         b_color = GSDL::Color.new(255, 165, 0)
-        bx, by = self.x - cam_x, self.y - cam_y
-        if @next_action.left?
-           p1 = {bx - 8.0_f32, by}; p2 = {bx + 4.0_f32, by - 8.0_f32}; p3 = {bx + 4.0_f32, by + 8.0_f32}
-           GSDL::Triangle.new(p1, p2, p3, color: b_color, z_index: z_index + 10).draw(draw)
-        elsif @next_action.right?
-           p1 = {bx + 8.0_f32, by}; p2 = {bx - 4.0_f32, by - 8.0_f32}; p3 = {bx - 4.0_f32, by + 8.0_f32}
-           GSDL::Triangle.new(p1, p2, p3, color: b_color, z_index: z_index + 10).draw(draw)
+        bx, by = self.x, self.y # Use world center directly
+        
+        # Determine triangle points based on world coords (Triangle class handles camera)
+        case self.direction
+        when .east?
+          if @next_action.left? # Facing Up
+            p1 = {bx, by - 16.0_f32}; p2 = {bx - 8.0_f32, by - 4.0_f32}; p3 = {bx + 8.0_f32, by - 4.0_f32}
+          else # Right (Facing Down)
+            p1 = {bx, by + 16.0_f32}; p2 = {bx - 8.0_f32, by + 4.0_f32}; p3 = {bx + 8.0_f32, by + 4.0_f32}
+          end
+        when .west?
+          if @next_action.left? # Facing Down
+            p1 = {bx, by + 16.0_f32}; p2 = {bx - 8.0_f32, by + 4.0_f32}; p3 = {bx + 8.0_f32, by + 4.0_f32}
+          else # Right (Facing Up)
+            p1 = {bx, by - 16.0_f32}; p2 = {bx - 8.0_f32, by - 4.0_f32}; p3 = {bx + 8.0_f32, by - 4.0_f32}
+          end
+        when .north?
+          if @next_action.left? # Facing Left
+            p1 = {bx - 16.0_f32, by}; p2 = {bx - 4.0_f32, by - 8.0_f32}; p3 = {bx - 4.0_f32, by + 8.0_f32}
+          else # Right (Facing Right)
+            p1 = {bx + 16.0_f32, by}; p2 = {bx + 4.0_f32, by - 8.0_f32}; p3 = {bx + 4.0_f32, by + 8.0_f32}
+          end
+        when .south?
+          if @next_action.left? # Facing Right
+            p1 = {bx + 16.0_f32, by}; p2 = {bx + 4.0_f32, by - 8.0_f32}; p3 = {bx + 4.0_f32, by + 8.0_f32}
+          else # Right (Facing Left)
+            p1 = {bx - 16.0_f32, by}; p2 = {bx - 4.0_f32, by - 8.0_f32}; p3 = {bx - 4.0_f32, by + 8.0_f32}
+          end
+        else # ignore
+          p1 = p2 = p3 = {0.0_f32, 0.0_f32}
         end
+        
+        GSDL::Triangle.new(p1, p2, p3, color: b_color, z_index: z_index + 50).draw(draw)
       end
 
       unless @wrecked || patient?

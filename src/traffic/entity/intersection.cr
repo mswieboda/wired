@@ -18,12 +18,26 @@ module Traffic
     @state_timer : GSDL::Timer
     @tile_x : Int32
     @tile_y : Int32
+    @signal_ns : TrafficSignal
+    @signal_ew : TrafficSignal
 
     def initialize(@tile_x, @tile_y)
       px = @tile_x * TileSize
       py = @tile_y * TileSize
-      super("signal", px + IntersectionSize - 20, py + 2)
+      
+      ns_x = px + (IntersectionSize - 12.0_f32)
+      ns_y = py + 16.0_f32
+      @signal_ns = TrafficSignal.new("traffic-signal-ns", ns_x, ns_y)
+      
+      ew_x = px + 16.0_f32
+      ew_y = py + (IntersectionSize - 36.0_f32)
+      @signal_ew = TrafficSignal.new("traffic-signal-ew", ew_x, ew_y)
+
+      # We don't use the base sprite for drawing anymore, but we must initialize it
+      super("traffic-signal-ns", px, py)
+      
       @state = IntersectionSignal::GreenNS
+      update_signal_frames
       @state_timer = GSDL::Timer.new(10.seconds)
       @state_timer.start
     end
@@ -42,6 +56,39 @@ module Traffic
         when .yellow_ew_left? then @state = IntersectionSignal::GreenNS;       @state_timer.duration = 10.seconds
         end
         @state_timer.restart
+        update_signal_frames
+      end
+    end
+
+    def update_signal_frames
+      case @state
+      when .green_ns?
+        @signal_ns.show_green
+        @signal_ew.show_red
+      when .yellow_ns?
+        @signal_ns.show_yellow
+        @signal_ew.show_red
+      when .green_ns_left?
+        @signal_ns.show_red_turn_green
+        @signal_ew.show_red
+      when .yellow_ns_left?
+        @signal_ns.show_red_turn_yellow
+        @signal_ew.show_red
+      when .green_ew?
+        @signal_ns.show_red
+        @signal_ew.show_green
+      when .yellow_ew?
+        @signal_ns.show_red
+        @signal_ew.show_yellow
+      when .green_ew_left?
+        @signal_ns.show_red
+        @signal_ew.show_red_turn_green
+      when .yellow_ew_left?
+        @signal_ns.show_red
+        @signal_ew.show_red_turn_yellow
+      when .all_red?
+        @signal_ns.show_red
+        @signal_ew.show_red
       end
     end
 
@@ -54,6 +101,7 @@ module Traffic
       else return
       end
       @state_timer.restart
+      update_signal_frames
     end
 
     def clicked?(mx, my)
@@ -63,60 +111,12 @@ module Traffic
     end
 
     def draw(draw : GSDL::Draw)
-      px = @tile_x * TileSize
-      py = @tile_y * TileSize
-      cam_x, cam_y = GSDL::Game.camera.x, GSDL::Game.camera.y
-      zoom = GSDL::Game.camera.zoom
+      @signal_ns.z_index = z_index
+      @signal_ew.z_index = z_index
       
-      # Tints
-      color_green  = GSDL::Color.new(100, 255, 100)
-      color_yellow = GSDL::Color.new(255, 255, 100)
-      color_red    = GSDL::Color.new(255, 100, 100)
-
-      ns_tint = color_red
-      ew_tint = color_red
-      ns_left_color = color_red
-      ew_left_color = color_red
-
-      case @state
-      when .green_ns?       then ns_tint = color_green
-      when .yellow_ns?      then ns_tint = color_yellow
-      when .green_ns_left?  then ns_left_color = color_green
-      when .yellow_ns_left? then ns_left_color = color_yellow
-      when .green_ew?       then ew_tint = color_green
-      when .yellow_ew?      then ew_tint = color_yellow
-      when .green_ew_left?  then ew_left_color = color_green
-      when .yellow_ew_left? then ew_left_color = color_yellow
-      end
-
-      # 1. Draw Signal Head Textures
-      old_scale_x, old_scale_y = draw.current_scale_x, draw.current_scale_y
-      draw.scale = zoom
-      
-      ns_x = px + (IntersectionSize - 12.0_f32)
-      ns_y = py + 16.0_f32
-      ew_center_x = px + 24.0_f32
-      ew_center_y = py + (IntersectionSize - 4.0_f32)
-      ew_rect_x = ew_center_x - 8.0_f32
-      ew_rect_y = ew_center_y - 32.0_f32
-
-      draw.texture(GSDL::TextureManager.get("signal"), dest_rect: GSDL::FRect.new(ns_x - cam_x, ns_y - cam_y, 16, 64), tint: ns_tint, z_index: z_index)
-      draw.texture_rotated(GSDL::TextureManager.get("signal"), dest_rect: GSDL::FRect.new(ew_rect_x - cam_x, ew_rect_y - cam_y, 16, 64), angle: 90.0, center: GSDL::Point.new(8, 32), tint: ew_tint, z_index: z_index)
-
-      draw.scale = {old_scale_x, old_scale_y}
-
-      # 2. Draw Left Arrows (Smaller, Always Visible)
-      # NS facing Left
-      p1_ns = {ns_x - 14.0_f32, ns_y + 32.0_f32} # Tip
-      p2_ns = {ns_x - 2.0_f32,  ns_y + 22.0_f32} # Top
-      p3_ns = {ns_x - 2.0_f32,  ns_y + 42.0_f32} # Bottom
-      GSDL::Triangle.new(p1_ns, p2_ns, p3_ns, color: ns_left_color, z_index: z_index + 20).draw(draw)
-
-      # EW facing Up
-      p1_ew = {ew_center_x,              ew_center_y - 14.0_f32} # Tip
-      p2_ew = {ew_center_x - 10.0_f32,  ew_center_y - 2.0_f32}  # Left
-      p3_ew = {ew_center_x + 10.0_f32,  ew_center_y - 2.0_f32}  # Right
-      GSDL::Triangle.new(p1_ew, p2_ew, p3_ew, color: ew_left_color, z_index: z_index + 20).draw(draw)
+      @signal_ns.draw(draw)
+      @signal_ew.draw(draw)
     end
   end
 end
+

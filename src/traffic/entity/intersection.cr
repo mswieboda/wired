@@ -75,8 +75,8 @@ module Traffic
 
       ns_tint = color_red
       ew_tint = color_red
-      ns_left_color : GSDL::Color? = nil
-      ew_left_color : GSDL::Color? = nil
+      ns_left_color = color_red
+      ew_left_color = color_red
 
       case @state
       when .green_ns?       then ns_tint = color_green
@@ -89,7 +89,7 @@ module Traffic
       when .yellow_ew_left? then ew_left_color = color_yellow
       end
 
-      # 1. Draw Signal Head Textures (Manually scaled/translated)
+      # 1. Draw Signal Head Textures
       old_scale_x, old_scale_y = draw.current_scale_x, draw.current_scale_y
       draw.scale = zoom
       
@@ -105,22 +105,18 @@ module Traffic
 
       draw.scale = {old_scale_x, old_scale_y}
 
-      # 2. Draw Left Arrows (Using GSDL::Triangle objects - they handle camera themselves)
-      if l_color = ns_left_color
-        # Facing West (Left)
-        p1 = {ns_x - 32.0_f32, ns_y + 32.0_f32} # Tip
-        p2 = {ns_x - 4.0_f32,  ns_y + 8.0_f32}  # Top base
-        p3 = {ns_x - 4.0_f32,  ns_y + 56.0_f32} # Bottom base
-        GSDL::Triangle.new(p1, p2, p3, color: l_color, z_index: z_index + 20).draw(draw)
-      end
+      # 2. Draw Left Arrows (Smaller, Always Visible)
+      # NS facing Left
+      p1_ns = {ns_x - 14.0_f32, ns_y + 32.0_f32} # Tip
+      p2_ns = {ns_x - 2.0_f32,  ns_y + 22.0_f32} # Top
+      p3_ns = {ns_x - 2.0_f32,  ns_y + 42.0_f32} # Bottom
+      GSDL::Triangle.new(p1_ns, p2_ns, p3_ns, color: ns_left_color, z_index: z_index + 20).draw(draw)
 
-      if l_color = ew_left_color
-        # Facing North (Up)
-        p1 = {ew_center_x,              py + (IntersectionSize - 48.0_f32)} # Tip
-        p2 = {ew_center_x - 24.0_f32, py + (IntersectionSize - 16.0_f32)} # Left base
-        p3 = {ew_center_x + 24.0_f32, py + (IntersectionSize - 16.0_f32)} # Right base
-        GSDL::Triangle.new(p1, p2, p3, color: l_color, z_index: z_index + 20).draw(draw)
-      end
+      # EW facing Up
+      p1_ew = {ew_center_x,              ew_center_y - 14.0_f32} # Tip
+      p2_ew = {ew_center_x - 10.0_f32,  ew_center_y - 2.0_f32}  # Left
+      p3_ew = {ew_center_x + 10.0_f32,  ew_center_y - 2.0_f32}  # Right
+      GSDL::Triangle.new(p1_ew, p2_ew, p3_ew, color: ew_left_color, z_index: z_index + 20).draw(draw)
     end
   end
 end

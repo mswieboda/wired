@@ -41,7 +41,8 @@ module Traffic
     def load_textures : Array(Tuple(String, String))
       [
         {"tiles", "gfx/tiles.png"},
-        {"signal", "gfx/signal.png"}
+        {"signal", "gfx/signal.png"},
+        {"car", "gfx/car.png"}
       ]
     end
 

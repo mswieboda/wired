@@ -10,6 +10,9 @@ module Traffic
       @map = GSDL::TileMapManager.get("traffic")
       @map.z_index = -10
       
+      # Zoom out 2x
+      GSDL::Game.camera.zoom = 0.5_f32
+
       # Find intersections in the map (gid 6)
       @map.layers.each do |layer|
         if layer.is_a?(GSDL::TileLayer)
@@ -44,6 +47,9 @@ module Traffic
     end
 
     def draw(draw : GSDL::Draw)
+      # Disable culling to ensure everything is drawn regardless of camera bounds
+      # draw.culling_enabled = false
+
       @map.draw(draw)
       @intersections.each(&.draw(draw))
     end

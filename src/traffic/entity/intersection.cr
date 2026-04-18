@@ -14,8 +14,8 @@ module Traffic
 
     def initialize(@tile_x, @tile_y)
       # Position in pixels based on tile coordinates
-      px = @tile_x * 64
-      py = @tile_y * 64
+      px = @tile_x * 128
+      py = @tile_y * 128
       
       # The signal sprite will be drawn twice, but for now let's just make it a composite or something.
       # Actually, let's just use GSDL::Draw to draw the signal indicator.
@@ -23,7 +23,7 @@ module Traffic
       
       # We'll place two signals: one for NS (vertical) and one for EW (horizontal).
       # For now, let's just place one and see how it looks.
-      super("signal", px + 64 - 20, py + 2)
+      super("signal", px + 128 - 20, py + 2)
       @state = IntersectionSignal::GreenNS
     end
 
@@ -61,19 +61,20 @@ module Traffic
     end
 
     def clicked?(mx, my)
-      px = @tile_x * 64
-      py = @tile_y * 64
-      mx >= px && mx < px + 64 && my >= py && my < py + 64
+      px = @tile_x * 128
+      py = @tile_y * 128
+      mx >= px && mx < px + 128 && my >= py && my < py + 128
     end
 
     def draw(draw : GSDL::Draw)
       # Common coordinates for the tile
-      px = @tile_x * 64.0_f32
-      py = @tile_y * 64.0_f32
+      px = @tile_x * 128.0_f32
+      py = @tile_y * 128.0_f32
 
       # NS Signal (Vertical)
-      # Position: Right side of vertical road, moved down 32px
-      ns_x = px + 44.0_f32
+      # Position: Center of the road (px + 64), offset by half width (8px) = px + 56
+      # Moved down 32px for spacing
+      ns_x = px + 56.0_f32
       ns_y = py + 32.0_f32
       draw.texture(
         texture: GSDL::TextureManager.get("signal"),
@@ -82,10 +83,10 @@ module Traffic
       )
       
       # EW Signal (Horizontal)
-      # Position: Centered vertically on road, moved left 32px (center at px + 0)
-      # We'll rotate around its own center (8, 32)
-      ew_center_x = px
-      ew_center_y = py + 32.0_f32
+      # Position: Center of the tile (px + 64, py + 64), rotated
+      # Moved left 32px (ew_center_x = 64 - 32 = 32)
+      ew_center_x = px + 32.0_f32
+      ew_center_y = py + 64.0_f32
       
       ew_rect_x = ew_center_x - 8.0_f32
       ew_rect_y = ew_center_y - 32.0_f32

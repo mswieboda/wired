@@ -68,9 +68,9 @@ GSDL uses a hook-based system for loading assets. Define these hooks in your `Ga
 - **Separation of Concerns:** Keep the **Update** logic (physics, collision, state) separated from the **Draw** logic.
 
 ## Compiling and Testing
-- **Build:** `make build`
+- **Build:** `make build`. You MUST only use `make build` to verify compilation. DO NOT use `make` or `make run` for automated execution. The user will handle running and verifying the binary manually after each successful build.
 - **Run:** `make run`
-- **Smoke Test:** `timeout 5s make run || true`
+- **Smoke Test:** `timeout 5s make build || true`
 
 ## Development Flow
 - **Logic:** Update methods handle physics and input; Draw methods handle rendering.

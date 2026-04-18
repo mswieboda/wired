@@ -5,8 +5,8 @@ module Traffic
     @vehicles : Array(Vehicle) = [] of Vehicle
 
     @spawn_timer : GSDL::Timer
-    @spawn_interval_min : Float32 = 1.0
-    @spawn_interval_max : Float32 = 5.0
+    @spawn_interval_min : Float32 = 0.5
+    @spawn_interval_max : Float32 = 2.0
 
     def initialize
       super(:main_menu)

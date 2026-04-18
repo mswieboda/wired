@@ -28,5 +28,17 @@ module Traffic
     def load_default_font
       "fonts/Electrolize-Regular.ttf"
     end
+
+    def load_textures : Array(Tuple(String, String))
+      [
+        {"tiles", "gfx/tiles.png"}
+      ]
+    end
+
+    def load_tile_maps : Array(Tuple(String, String))
+      [
+        {"traffic", "maps/traffic.json"}
+      ]
+    end
   end
 end

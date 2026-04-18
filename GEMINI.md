@@ -43,6 +43,25 @@
 - **Scenes:** Game logic is encapsulated in scenes (e.g., `Scene::MainMenu`, `Scene::Play`).
 - **Entities:** Independent classes for game objects (Vehicles, Intersections) that follow a **State -> Update -> Draw** loop.
 
+## Asset Loading
+GSDL uses a hook-based system for loading assets. Define these hooks in your `Game` or `Scene` class to have them loaded automatically.
+
+- **Hook Methods:**
+  - `load_textures` : `Array(Tuple(String, String))` — `{"key", "path/to/texture.png"}`
+  - `load_tile_maps` : `Array(Tuple(String, String))` — `{"key", "path/to/map.json"}`
+  - `load_audio` : `Array(Tuple(String, String))` — `{"key", "path/to/audio.wav"}`
+  - `load_fonts` : `Array(Tuple(String, String, Float32))` — `{"key", "path/to/font.ttf", size}`
+  - `load_default_font` : `String` — `"path/to/font.ttf"`
+
+- **Accessing Assets:**
+  Once defined in a hook, access assets using their manager's `get` method:
+  - `GSDL::TextureManager.get("key")`
+  - `GSDL::TileMapManager.get("key")`
+  - `GSDL::AudioManager.get("key")`
+  - `GSDL::FontManager.get("key")`
+
+- **Best Practice:** Load global assets (common UI, main tilemap) in the `Game` class. Load scene-specific assets (unique backgrounds, special effects) in the relevant `Scene` class. Do not load assets manually in `initialize`.
+
 ## Coding / Convention Standards
 - **Formatting:** Do not run `crystal format`.
 - **Whitespace:** Trim all trailing whitespace. Ensure exactly one trailing newline followed by an empty line (double newline total) at the end of every file.

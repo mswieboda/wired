@@ -3,23 +3,23 @@ module Traffic
     @map : GSDL::TileMap
     @intersections : Array(Intersection) = [] of Intersection
     @vehicles : Array(Vehicle) = [] of Vehicle
-    
+
     @spawn_timer : Float32 = 0.0
     @spawn_interval : Float32 = 0.5 # Faster spawn for testing
 
     def initialize
       super(:main_menu)
-      
+
       # Assets are loaded automatically via Traffic::Game hooks
       @map = GSDL::TileMapManager.get("traffic")
       @map.z_index = -10
-      
+
       # Camera configuration
       camera.type = GSDL::Camera::Type::Manual
       camera.zoom = 0.5_f32
       camera.set_boundary(@map)
       camera.speed = 1000.0_f32 # Faster camera for larger map
-      
+
       # Find intersections in the map (gid 6)
       @map.layers.each do |layer|
         if layer.is_a?(GSDL::TileLayer)
@@ -38,9 +38,9 @@ module Traffic
       if GSDL::Keys.just_pressed?(GSDL::Keys::Escape)
         exit_with_transition
       end
-      
+
       update_spawner(dt)
-      
+
       # Zoom controls
       if GSDL::Input.action?(:zoom_in)
         camera.zoom += 1.0_f32 * dt
@@ -49,26 +49,26 @@ module Traffic
         camera.zoom -= 1.0_f32 * dt
         camera.zoom = 0.1_f32 if camera.zoom < 0.1_f32
       end
-      
+
       # Toggle intersections on click
       if GSDL::Mouse.just_pressed?(GSDL::Mouse::ButtonLeft)
         mx, my = GSDL::Mouse.position
         world_mx = (mx / camera.zoom) + camera.x
         world_my = (my / camera.zoom) + camera.y
-        
+
         @intersections.each do |intersection|
           if intersection.clicked?(world_mx, world_my)
             intersection.toggle
           end
         end
       end
-      
+
       @map.update(dt)
       @intersections.each(&.update(dt))
-      
+
       @vehicles.each(&.update(dt, @intersections))
       @vehicles.reject!(&.off_screen?)
-      
+
       camera.update(dt)
     end
 
@@ -88,10 +88,10 @@ module Traffic
       # Vehicle is 64x32. If we want it "centered" in 64px lane:
       # Horizontal: Y offset = 32 - 16 = 16.
       # Vertical: X offset = 32 - 32 = 0? (since car is 64 wide).
-      
+
       vehicle_type = (Random.rand < 0.1) ? VehicleType::Priority : VehicleType::Civilian
       choice = Random.rand(4)
-      
+
       case choice
       when 0 # Eastbound (Bottom lane of row 3)
         # Shift up 8px closer to center

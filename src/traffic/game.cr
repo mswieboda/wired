@@ -13,11 +13,11 @@ module Traffic
 
       # Configure Cyberpunk Color Scheme
       GSDL::ColorScheme.configure(
-        ui_bg:        "#131313", # Blackish
-        ui_text:      "#FFFFFF", # Neon Lime
-        ui_text_alt:  "#99FF33", # Neon Lime
-        ui_hover:     "#99FF33", # white
-        main:         "#99FF33", # Neon Lime
+        ui_bg: "#131313",       # Blackish
+        ui_text: "#FFFFFF",     # Neon Lime
+        ui_text_alt: "#99FF33", # Neon Lime
+        ui_hover: "#99FF33",    # white
+        main: "#99FF33",        # Neon Lime
       )
     end
 
@@ -42,13 +42,13 @@ module Traffic
       [
         {"tiles", "gfx/tiles.png"},
         {"signal", "gfx/signal.png"},
-        {"car", "gfx/car.png"}
+        {"car", "gfx/car.png"},
       ]
     end
 
     def load_tile_maps : Array(Tuple(String, String))
       [
-        {"traffic", "maps/traffic.json"}
+        {"traffic", "maps/traffic.json"},
       ]
     end
   end

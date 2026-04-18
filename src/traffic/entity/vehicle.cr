@@ -8,7 +8,7 @@ module Traffic
     property vehicle_type : VehicleType
     property speed : Float32
     property? waiting : Bool = false
-    
+
     @original_speed : Float32
 
     def initialize(@vehicle_type, direction : GSDL::Direction, x, y)
@@ -19,10 +19,10 @@ module Traffic
                           Random.rand(200.0_f32..350.0_f32)
                         end
       @speed = @original_speed
-      
+
       super("car", x, y)
       self.direction = direction
-      
+
       # Adjust visual orientation and center on lane
       # car.png is 64x32
       # tile is 128x128
@@ -41,11 +41,11 @@ module Traffic
 
     def update(dt : Float32, intersections : Array(Intersection))
       @waiting = false
-      
+
       # Basic movement
       dx = 0.0_f32
       dy = 0.0_f32
-      
+
       case self.direction
       when .east?  then dx = 1.0_f32
       when .west?  then dx = -1.0_f32
@@ -53,10 +53,10 @@ module Traffic
       when .south? then dy = 1.0_f32
       else # ignore others
       end
-      
+
       # Intersection check
       check_intersections(intersections)
-      
+
       unless @waiting
         self.x += dx * @speed * dt
         self.y += dy * @speed * dt
@@ -67,10 +67,10 @@ module Traffic
       # Detection box in front of the vehicle
       # Since tiles are 128px, let's check about 40px ahead
       look_ahead = 40.0_f32
-      
+
       check_x = self.x + 32 # center of 64px width
       check_y = self.y + 16 # center of 32px height
-      
+
       case self.direction
       when .east?  then check_x += look_ahead
       when .west?  then check_x -= look_ahead
@@ -78,7 +78,7 @@ module Traffic
       when .south? then check_y += look_ahead
       else # ignore others
       end
-      
+
       intersections.each do |inter|
         if inter.clicked?(check_x, check_y) # Reusing clicked? for bounds check
           case self.direction
@@ -109,9 +109,9 @@ module Traffic
       # Manually account for camera for texture drawing
       old_scale_x = draw.current_scale_x
       old_scale_y = draw.current_scale_y
-      
+
       draw.scale = GSDL::Game.camera.zoom
-      
+
       cam_x = GSDL::Game.camera.x
       cam_y = GSDL::Game.camera.y
 
@@ -123,7 +123,7 @@ module Traffic
         center: GSDL::Point.new(32, 16),
         z_index: z_index
       )
-      
+
       draw.scale = {old_scale_x, old_scale_y}
     end
   end

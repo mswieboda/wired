@@ -97,4 +97,3 @@ release-package-win:
 
 release-package-linux:
 	@$(MAKE) release-package TARGET=linux
-

@@ -82,4 +82,3 @@ GSDL uses a hook-based system for loading assets. Define these hooks in your `Ga
 - **Library Files:** NEVER edit files in `./lib/`. Summarize proposed changes for the user to apply to source repositories.
 - **Git:** No write operations (`commit`, `add`, `push`).
 - **Dependencies:** Verify usage in `shard.yml` before adding new libraries.
-

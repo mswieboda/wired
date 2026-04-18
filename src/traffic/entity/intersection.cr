@@ -16,11 +16,11 @@ module Traffic
       # Position in pixels based on tile coordinates
       px = @tile_x * 128
       py = @tile_y * 128
-      
+
       # The signal sprite will be drawn twice, but for now let's just make it a composite or something.
       # Actually, let's just use GSDL::Draw to draw the signal indicator.
       # But the user asked for a 16x64 signal graphic.
-      
+
       # We'll place two signals: one for NS (vertical) and one for EW (horizontal).
       # For now, let's just place one and see how it looks.
       super("signal", px + 128 - 20, py + 2)
@@ -76,7 +76,7 @@ module Traffic
       # Right edge is px + 128. So ns_x = px + 128 - 12 = px + 116.
       ns_x = px + 116.0_f32
       ns_y = py + 16.0_f32
-      
+
       # EW Signal (Horizontal)
       # 3/4 (12px) inside bottom edge, 1/4 (4px) outside.
       # Bottom edge is py + 128. Signal "height" is 16.
@@ -84,16 +84,16 @@ module Traffic
       # So ew_center_y + 8 = py + 128 + 4 => ew_center_y = py + 124.
       ew_center_x = px + 24.0_f32
       ew_center_y = py + 124.0_f32
-      
+
       ew_rect_x = ew_center_x - 8.0_f32
       ew_rect_y = ew_center_y - 32.0_f32
 
       # Manually account for camera for texture drawing
       old_scale_x = draw.current_scale_x
       old_scale_y = draw.current_scale_y
-      
+
       draw.scale = GSDL::Game.camera.zoom
-      
+
       cam_x = GSDL::Game.camera.x
       cam_y = GSDL::Game.camera.y
 
@@ -103,7 +103,7 @@ module Traffic
         dest_rect: GSDL::FRect.new(x: ns_x - cam_x, y: ns_y - cam_y, w: 16, h: 64),
         z_index: z_index
       )
-      
+
       # Draw EW Signal
       draw.texture_rotated(
         texture: GSDL::TextureManager.get("signal"),
@@ -112,12 +112,12 @@ module Traffic
         center: GSDL::Point.new(8, 32),
         z_index: z_index
       )
-      
+
       draw.scale = {old_scale_x, old_scale_y}
-      
+
       # Glow effect for active lights (GSDL::Shape handles camera automatically)
       glow_color = GSDL::Color.new(red: 255, green: 255, blue: 255, alpha: 180)
-      
+
       # NS Glow (Vertical offsets)
       case @state
       when IntersectionSignal::GreenNS
@@ -127,7 +127,7 @@ module Traffic
       when IntersectionSignal::GreenEW, IntersectionSignal::YellowEW
         draw.circle_fill(ns_x + 8, ns_y + 12, 6, glow_color, z_index + 1)
       end
-      
+
       # EW Glow (Horizontal offsets after 90 deg rotation)
       case @state
       when IntersectionSignal::GreenEW

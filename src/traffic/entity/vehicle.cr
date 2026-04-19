@@ -19,7 +19,7 @@ module Traffic
   class Vehicle < GSDL::Sprite
     include GSDL::Collidable
 
-    FrustrationRate = 1.3_f32
+    FrustrationRate = 0.5_f32
 
     property vehicle_type : VehicleType
     property speed : Float32

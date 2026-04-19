@@ -11,14 +11,14 @@ module Traffic
     AllRed
   end
 
-  class Intersection < GSDL::Sprite
+  class Intersection < GSDL::Entity
     property state : IntersectionSignal = IntersectionSignal::GreenNS
     getter tile_x : Int32
     getter tile_y : Int32
 
-    GreenDuration = 30_f32
-    GreenLeftDuration = 10_f32
-    YellowDuration = 3_f32
+    GreenDuration = 28_f32
+    GreenLeftDuration = 5_f32
+    YellowDuration = 2_f32
     RedDuration = 1_f32
 
     @state_timer : GSDL::Timer
@@ -28,27 +28,30 @@ module Traffic
     @signal_ew : TrafficSignal
 
     def initialize(@tile_x, @tile_y)
-      px = @tile_x * TileSize
-      py = @tile_y * TileSize
+      @x = @tile_x * TileSize
+      @y = @tile_y * TileSize
+      @state = IntersectionSignal::GreenNS
+      @state_timer = GSDL::Timer.new(GreenDuration.seconds)
 
-      ns_x = px + (IntersectionSize - 12.0_f32)
-      ns_y = py + 16.0_f32
+      # Position children relative to parent (Intersection at 0, 0)
+      ns_x = IntersectionSize - 12.0_f32
+      ns_y = 16.0_f32
       @signal_ns = TrafficSignal.new("traffic-signal-nb", ns_x, ns_y)
 
-      ew_x = px + 16.0_f32
-      ew_y = py + (IntersectionSize - 36.0_f32)
+      ew_x = 16.0_f32
+      ew_y = IntersectionSize - 36.0_f32
       @signal_ew = TrafficSignal.new("traffic-signal-eb", ew_x, ew_y)
 
-      # We don't use the base sprite for drawing anymore, but we must initialize it
-      super("traffic-signal-nb", px, py)
+      add_child(@signal_ns)
+      add_child(@signal_ew)
 
-      @state = IntersectionSignal::GreenNS
       update_signal_frames
-      @state_timer = GSDL::Timer.new(GreenDuration.seconds)
       @state_timer.start
     end
 
     def update(dt : Float32)
+      return unless super(dt)
+
       if @state_timer.done?
         case @state
         when .green_ns?
@@ -83,6 +86,7 @@ module Traffic
         @state_timer.restart
         update_signal_frames
       end
+      true
     end
 
     def update_signal_frames
@@ -144,17 +148,13 @@ module Traffic
     end
 
     def clicked?(mx, my)
-      px = @tile_x * TileSize
-      py = @tile_y * TileSize
-      mx >= px && mx < px + IntersectionSize && my >= py && my < py + IntersectionSize
+      mx >= @x && mx < @x + IntersectionSize && my >= @y && my < @y + IntersectionSize
     end
 
     def draw(draw : GSDL::Draw)
       @signal_ns.z_index = z_index
       @signal_ew.z_index = z_index
-
-      @signal_ns.draw(draw)
-      @signal_ew.draw(draw)
+      super(draw)
     end
   end
 end

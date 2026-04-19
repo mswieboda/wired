@@ -175,10 +175,6 @@ module Traffic
       GSDL::FRect.new(-width / 2.0_f32, -height / 2.0_f32, width.to_f32, height.to_f32)
     end
 
-    def tint_color : GSDL::Color
-      @wrecked ? GSDL::ColorScheme.get(:wrecked) : @paint_color
-    end
-
     def look_ahead_box : GSDL::FRect
       box = collision_box
       look_dist = 24.0_f32
@@ -654,12 +650,20 @@ module Traffic
         ).draw(draw)
       end
 
-      @active_sprite_body.tint = tint_color
+      @active_sprite_body.tint = @paint_color
+
+      if @wrecked
+        # TODO: uses subtraction, probably should be redone for clarity
+        wrecked_color = @paint_color - GSDL::ColorScheme.get(:wrecked)
+        @active_sprite_body.tint = wrecked_color
+        @active_sprite_top.tint = wrecked_color
+      end
+
       @active_sprite_body.z_index = z_index
-      
-      @active_sprite_top.tint = @wrecked ? GSDL::ColorScheme.get(:wrecked) : GSDL::Color::White
       @active_sprite_top.z_index = z_index
+
       super(draw)
+
       draw_status_overlay(draw, height.to_f32, GSDL::Game.camera.x, GSDL::Game.camera.y)
     end
   end

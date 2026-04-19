@@ -1,8 +1,8 @@
 version: 2.0
 shards:
   game_sdl:
-    path: ../game_sdl
-    version: 0.99.10
+    git: https://github.com/mswieboda/game_sdl.git
+    version: 0.99.12
 
   sdl3:
     git: https://github.com/mswieboda/sdl3.cr.git

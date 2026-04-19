@@ -36,7 +36,8 @@ module Traffic
         car_dark_blue: GSDL::Color.new(b: 102),
         
         # Wrecked Color
-        wrecked: GSDL::Color.gray(v: 51, a: 51)
+        # TODO: uses subtraction, probably should be redone for clarity
+        wrecked: GSDL::Color.gray(v: 192, a: 32)
       )
     end
 

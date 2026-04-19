@@ -66,10 +66,6 @@ module Traffic
         exit_with_transition
       end
 
-      if GSDL::Keys.just_pressed?(GSDL::Keys::Space)
-        GSDL::Data.increment("total_escorted", 1)
-      end
-
       update_spawner(dt)
 
       # Zoom controls
@@ -123,7 +119,17 @@ module Traffic
       @intersections.each(&.update(dt))
 
       @vehicles.each(&.update(dt, @intersections, @vehicles))
-      @vehicles.reject!(&.off_screen?)
+      @vehicles.reject! do |vehicle|
+        if vehicle.off_screen?
+          if vehicle.is_a?(VehiclePriority)
+            GSDL::Data.increment("total_escorted", 1)
+            GSDL::Data.increment("ambulances", 1)
+          end
+          true
+        else
+          false
+        end
+      end
 
       # Deselect if selected vehicle is gone or wrecked
       if selected = @selected_vehicle

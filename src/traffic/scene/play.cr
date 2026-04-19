@@ -48,20 +48,23 @@ module Traffic
 
       # Zoom controls
       if GSDL::Input.action?(:zoom_in)
-        camera.zoom += 1.0_f32 * dt
-        camera.zoom = 2_f32 if camera.zoom > 2_f32
+        zoom = camera.zoom + 1.0_f32 * dt
+        zoom = 2_f32 if zoom > 2_f32
+        camera.zoom = zoom
       end
       if GSDL::Input.action?(:zoom_out)
-        camera.zoom -= 1.0_f32 * dt
-        camera.zoom = 0.25_f32 if camera.zoom < 0.25_f32
+        zoom = camera.zoom - 1.0_f32 * dt
+        zoom = 0.25_f32 if zoom < 0.25_f32
+        camera.zoom = zoom
       end
 
       # Mouse wheel zoom
       wheel_y = GSDL::Mouse.wheel_y
       if wheel_y != 0
-        camera.zoom += wheel_y * 0.1_f32
-        camera.zoom = 0.25_f32 if camera.zoom < 0.25_f32
-        camera.zoom = 2_f32 if camera.zoom > 2_f32
+        zoom = camera.zoom + wheel_y * 0.1_f32
+        zoom = 2_f32 if zoom > 2_f32
+        zoom = 0.25_f32 if zoom < 0.25_f32
+        camera.zoom = zoom
       end
 
       # Toggle intersections or select vehicles on click

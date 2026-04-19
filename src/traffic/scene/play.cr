@@ -38,10 +38,19 @@ module Traffic
         end
       end
 
+      GSDL::Data.increment("total_escorted", 0)
+      GSDL::Data.increment("ambulances", 0)
+      GSDL::Data.increment("police", 0)
+      GSDL::Data.increment("limos", 0)
+
       hud = GSDL::HUD.new
+
+      text_data_template = "Total: {total_escorted}\n" \
+        "<c:red>A</c>: {ambulances} " \
+        "<c:blue>P</c>: {police} " \
+        "<c:gold>V</c>: {limos}"
       hud << GSDL::HUDText.new(
-        # text_data_template: "Total Escorted:\n",
-        text: "Total Escorted: 1\nA: 2 P: 7 V: 5",
+        text_data_template: text_data_template,
         anchor: GSDL::Anchor::TopRight,
         offset_x: 8,
         offset_y: 8,
@@ -55,6 +64,10 @@ module Traffic
     def update(dt : Float32)
       if GSDL::Keys.just_pressed?(GSDL::Keys::Escape)
         exit_with_transition
+      end
+
+      if GSDL::Keys.just_pressed?(GSDL::Keys::Space)
+        GSDL::Data.increment("total_escorted", 1)
       end
 
       update_spawner(dt)

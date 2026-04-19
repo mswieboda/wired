@@ -16,6 +16,11 @@ module Traffic
     getter tile_x : Int32
     getter tile_y : Int32
 
+    GreenDuration = 30_f32
+    GreenLeftDuration = 10_f32
+    YellowDuration = 3_f32
+    RedDuration = 1_f32
+
     @state_timer : GSDL::Timer
     @tile_x : Int32
     @tile_y : Int32
@@ -39,23 +44,42 @@ module Traffic
 
       @state = IntersectionSignal::GreenNS
       update_signal_frames
-      @state_timer = GSDL::Timer.new(10.seconds)
+      @state_timer = GSDL::Timer.new(GreenDuration.seconds)
       @state_timer.start
     end
 
     def update(dt : Float32)
       if @state_timer.done?
         case @state
-        when .green_ns?       then @state = IntersectionSignal::YellowNS;      @state_timer.duration = 3.seconds
-        when .yellow_ns?      then @state = IntersectionSignal::GreenNSLeft;  @state_timer.duration = 10.seconds
-        when .green_ns_left?  then @state = IntersectionSignal::YellowNSLeft; @state_timer.duration = 3.seconds
-        when .yellow_ns_left? then @state = IntersectionSignal::AllRed;        @state_timer.duration = 1.seconds
-        when .all_red?        then @state = IntersectionSignal::GreenEW;       @state_timer.duration = 10.seconds
-        when .green_ew?       then @state = IntersectionSignal::YellowEW;      @state_timer.duration = 3.seconds
-        when .yellow_ew?      then @state = IntersectionSignal::GreenEWLeft;  @state_timer.duration = 10.seconds
-        when .green_ew_left?  then @state = IntersectionSignal::YellowEWLeft; @state_timer.duration = 3.seconds
-        when .yellow_ew_left? then @state = IntersectionSignal::GreenNS;       @state_timer.duration = 10.seconds
+        when .green_ns?
+          @state = IntersectionSignal::YellowNS
+          @state_timer.duration = YellowDuration.seconds
+        when .yellow_ns?
+          @state = IntersectionSignal::GreenNSLeft
+          @state_timer.duration = GreenLeftDuration.seconds
+        when .green_ns_left?
+          @state = IntersectionSignal::YellowNSLeft
+          @state_timer.duration = YellowDuration.seconds
+        when .yellow_ns_left?
+          @state = IntersectionSignal::AllRed
+          @state_timer.duration = RedDuration.seconds
+        when .all_red?
+          @state = IntersectionSignal::GreenEW
+          @state_timer.duration = GreenDuration.seconds
+        when .green_ew?
+          @state = IntersectionSignal::YellowEW
+          @state_timer.duration = YellowDuration.seconds
+        when .yellow_ew?
+          @state = IntersectionSignal::GreenEWLeft
+          @state_timer.duration = GreenLeftDuration.seconds
+        when .green_ew_left?
+          @state = IntersectionSignal::YellowEWLeft
+          @state_timer.duration = YellowDuration.seconds
+        when .yellow_ew_left?
+          @state = IntersectionSignal::GreenNS
+          @state_timer.duration = GreenDuration.seconds
         end
+
         @state_timer.restart
         update_signal_frames
       end
@@ -95,12 +119,26 @@ module Traffic
 
     def toggle
       case @state
-      when .green_ns?       then puts "Forcing NS Yellow..."; @state = IntersectionSignal::YellowNS;      @state_timer.duration = 3.seconds
-      when .green_ns_left?  then puts "Forcing NS Left Yellow..."; @state = IntersectionSignal::YellowNSLeft; @state_timer.duration = 3.seconds
-      when .green_ew?       then puts "Forcing EW Yellow..."; @state = IntersectionSignal::YellowEW;      @state_timer.duration = 3.seconds
-      when .green_ew_left?  then puts "Forcing EW Left Yellow..."; @state = IntersectionSignal::YellowEWLeft; @state_timer.duration = 3.seconds
-      else return
+      when .green_ns?
+        puts "Forcing NS Yellow..."
+        @state = IntersectionSignal::YellowNS
+        @state_timer.duration = YellowDuration.seconds
+      when .green_ns_left?
+        puts "Forcing NS Left Yellow..."
+        @state = IntersectionSignal::YellowNSLeft
+        @state_timer.duration = YellowDuration.seconds
+      when .green_ew?
+        puts "Forcing EW Yellow..."
+        @state = IntersectionSignal::YellowEW
+        @state_timer.duration = YellowDuration.seconds
+      when .green_ew_left?
+        puts "Forcing EW Left Yellow..."
+        @state = IntersectionSignal::YellowEWLeft
+        @state_timer.duration = YellowDuration.seconds
+      else
+        return
       end
+
       @state_timer.restart
       update_signal_frames
     end

@@ -19,6 +19,8 @@ module Traffic
   class Vehicle < GSDL::Sprite
     include GSDL::Collidable
 
+    FrustrationRate = 1.3_f32
+
     property vehicle_type : VehicleType
     property speed : Float32
     property? waiting : Bool = false
@@ -27,13 +29,12 @@ module Traffic
     property frustration : Float32 = 0.0_f32
     property path = Deque(IntersectionAction).new
     property next_action : IntersectionAction = IntersectionAction::Straight
-
     property lane_state : LaneState = LaneState::Stable
+
     @target_world_coord : Float32 = 0.0_f32
     @yield_timer : GSDL::Timer
     @blinker_timer : GSDL::Timer
     @blinker_on : Bool = false
-
     @original_speed : Float32
     @honk_timer : GSDL::Timer
     @rage_cooldown : GSDL::Timer
@@ -385,7 +386,7 @@ module Traffic
 
     private def update_frustration(dt : Float32)
       if @waiting
-        @frustration += dt * 2.0
+        @frustration += dt * FrustrationRate
         if road_rage? && !@rage_cooldown.started?
           GSDL::AudioManager.get("rage_trigger").play; @rage_cooldown.start
         end

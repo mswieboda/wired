@@ -1,9 +1,4 @@
 module Traffic
-  enum VehicleType
-    Civilian
-    Priority
-  end
-
   enum IntersectionAction
     Straight
     Right
@@ -16,17 +11,12 @@ module Traffic
     Switching
   end
 
-  class Vehicle < GSDL::Sprite
+  abstract class Vehicle < GSDL::Sprite
     include GSDL::Collidable
 
-    FrustrationRate = 0.5_f32
-
-    property vehicle_type : VehicleType
     property speed : Float32
     property? waiting : Bool = false
     property? wrecked : Bool = false
-    property time_to_destination : Float32 = 0.0_f32
-    property frustration : Float32 = 0.0_f32
     property path = Deque(IntersectionAction).new
     property next_action : IntersectionAction = IntersectionAction::Straight
     property lane_state : LaneState = LaneState::Stable
@@ -36,32 +26,22 @@ module Traffic
     @blinker_timer : GSDL::Timer
     @blinker_on : Bool = false
     @original_speed : Float32
-    @honk_timer : GSDL::Timer
-    @rage_cooldown : GSDL::Timer
     @last_intersection : Intersection?
     @safety_timer : GSDL::Timer? = nil
 
-    def patient?    ; @frustration < PatienceThresholds::ANXIOUS; end
-    def anxious?    ; @frustration >= PatienceThresholds::ANXIOUS && @frustration < PatienceThresholds::FRUSTRATED; end
-    def frustrated? ; @frustration >= PatienceThresholds::FRUSTRATED && @frustration < PatienceThresholds::ROAD_RAGE; end
-    def road_rage?  ; @frustration >= PatienceThresholds::ROAD_RAGE; end
+    abstract def priority? : Bool
+    abstract def skips_red_lights? : Bool
+    abstract def base_speed_range : Range(Float32, Float32)
+    abstract def update_special_behavior(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
+    abstract def draw_status_overlay(draw : GSDL::Draw, th : Float32, cam_x : Float32, cam_y : Float32)
+    abstract def tint_color : GSDL::Color
 
-    def initialize(@vehicle_type : VehicleType, direction : GSDL::Direction, x : Int32 | Float32, y : Int32 | Float32)
-      @honk_timer = GSDL::Timer.new(Time::Span.new(seconds: Random.rand(4..8)))
-      @honk_timer.start
-      @rage_cooldown = GSDL::Timer.new(2.seconds)
-
+    def initialize(direction : GSDL::Direction, x : Int32 | Float32, y : Int32 | Float32)
       @yield_timer = GSDL::Timer.new(5.seconds)
       @blinker_timer = GSDL::Timer.new(0.5.seconds)
       @blinker_timer.start
 
-      @original_speed = case @vehicle_type
-                        when VehicleType::Priority
-                          @time_to_destination = 60.0_f32
-                          Random.rand(400.0_f32..550.0_f32)
-                        else
-                          Random.rand(200.0_f32..350.0_f32)
-                        end
+      @original_speed = Random.rand(base_speed_range)
       @speed = @original_speed
 
       self.direction = direction
@@ -227,15 +207,9 @@ module Traffic
         @blinker_timer.restart
       end
 
-      if @vehicle_type == VehicleType::Priority
-        decay_rate = 1.0_f32
-        decay_rate = is_waiting_on_wreck?(all_vehicles) ? 10.0_f32 : 3.0_f32 if @waiting
-        @time_to_destination -= dt * decay_rate
-        @time_to_destination = 0.0_f32 if @time_to_destination < 0
-      end
+      update_special_behavior(dt, intersections, all_vehicles)
 
       return if @wrecked
-      update_frustration(dt) unless @vehicle_type == VehicleType::Priority
       @waiting = false
 
       # Collision check
@@ -352,7 +326,7 @@ module Traffic
       if (current_offset - req_offset).abs > 5.0_f32
         # Need to switch
         target_world = base_coord + req_offset
-        aggressive = @vehicle_type == VehicleType::Priority
+        aggressive = priority?
 
         if @lane_state.yielding? || aggressive
           if !aggressive && @yield_timer.done?
@@ -381,22 +355,6 @@ module Traffic
         end
       else
         @lane_state = LaneState::Stable
-      end
-    end
-
-    private def update_frustration(dt : Float32)
-      if @waiting
-        @frustration += dt * FrustrationRate
-        if road_rage? && !@rage_cooldown.started?
-          GSDL::AudioManager.get("rage_trigger").play; @rage_cooldown.start
-        end
-        if frustrated? && @honk_timer.done?
-            GSDL::AudioManager.get("honk").play; @honk_timer.duration = Time::Span.new(seconds: Random.rand(4..8)); @honk_timer.restart
-        end
-      else
-        unless road_rage? && @rage_cooldown.running?
-          @frustration -= dt * 8.0; @frustration = 0.0 if @frustration < 0
-        end
       end
     end
 
@@ -469,7 +427,7 @@ module Traffic
       intersections.each do |inter|
         if inter.clicked?(check_x, check_y)
           next if is_committed
-          next if road_rage? || @vehicle_type == VehicleType::Priority
+          next if skips_red_lights?
           dist_to_line = case self.direction
                          when .east?  then (inter.tile_x * TileSize) - (self.x + width / 2.0_f32)
                          when .west?  then (self.x - width / 2.0_f32) - (inter.tile_x * TileSize + IntersectionSize)
@@ -531,7 +489,7 @@ module Traffic
       flip = self.direction.west? ? GSDL::TileMap::Flip::Horizontal : GSDL::TileMap::Flip::None
       tex = GSDL::TextureManager.get(current_texture_key)
       tw, th = tex.size[0].to_f32, tex.size[1].to_f32
-      tint_color = @wrecked ? GSDL::Color.new(40, 40, 40) : (@vehicle_type == VehicleType::Priority ? GSDL::Color.new(0, 0, 255, 224) : GSDL::Color::White)
+      tint_color = self.tint_color
       draw.texture(texture: tex, dest_rect: GSDL::FRect.new(x: self.x - (tw/2.0_f32) - cam_x, y: self.y - (th/2.0_f32) - cam_y, w: tw, h: th), flip: flip, tint: tint_color, z_index: z_index)
 
       # Blinkers
@@ -572,15 +530,7 @@ module Traffic
         GSDL::Triangle.new(p1, p2, p3, color: b_color, z_index: z_index + 50).draw(draw)
       end
 
-      unless @wrecked || patient?
-        bar_w, bar_h = 40.0_f32, 6.0_f32
-        bar_x, bar_y = self.x - cam_x - (bar_w / 2.0_f32), self.y - cam_y - (th / 2.0_f32) - 12.0_f32
-        draw.rect_fill(GSDL::FRect.new(bar_x, bar_y, bar_w, bar_h), GSDL::Color.new(30, 30, 30, 150), z_index + 1)
-        percent = Math.min(1.0_f32, @frustration / PatienceThresholds::ROAD_RAGE)
-        color = road_rage? ? GSDL::Color.new(255, 50, 50) : (frustrated? ? GSDL::Color.new(255, 120, 50) : (anxious? ? GSDL::Color.new(255, 255, 50) : GSDL::Color.new(100, 255, 100)))
-        draw.rect_fill(GSDL::FRect.new(bar_x, bar_y, bar_w * percent, bar_h), color, z_index + 2)
-        draw.rect_fill(GSDL::FRect.new(bar_x + bar_w + 4, bar_y - 4, 8, 14), GSDL::Color.new(255, 0, 0), z_index + 3) if road_rage?
-      end
+      draw_status_overlay(draw, th, cam_x, cam_y)
       draw.scale = {old_scale_x, old_scale_y}
     end
   end

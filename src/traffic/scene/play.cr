@@ -110,20 +110,20 @@ module Traffic
 
     private def spawn_vehicle
       # Adjusted based on traffic.json: Row 6,7 is road. Col 7,8 is road.
-      vehicle_type = (Random.rand < 0.1) ? VehicleType::Priority : VehicleType::Civilian
+      is_priority = Random.rand < 0.1
       choice = Random.rand(4)
 
       # For initial spawn, we don't know if we need to switch yet.
       # Pathfinding is done AFTER creation.
       new_vehicle = case choice
                     when 0 # Eastbound (Horizontal road at row 6,7)
-                      Vehicle.new(vehicle_type, GSDL::Direction::East, -IntersectionSize, 6 * TileSize + Lane4)
+                      is_priority ? VehiclePriority.new(GSDL::Direction::East, -IntersectionSize, 6 * TileSize + Lane4) : VehicleCivilian.new(GSDL::Direction::East, -IntersectionSize, 6 * TileSize + Lane4)
                     when 1 # Westbound
-                      Vehicle.new(vehicle_type, GSDL::Direction::West, 14 * TileSize + IntersectionSize, 6 * TileSize + Lane1)
+                      is_priority ? VehiclePriority.new(GSDL::Direction::West, 14 * TileSize + IntersectionSize, 6 * TileSize + Lane1) : VehicleCivilian.new(GSDL::Direction::West, 14 * TileSize + IntersectionSize, 6 * TileSize + Lane1)
                     when 2 # Southbound (Vertical road at col 7,8)
-                      Vehicle.new(vehicle_type, GSDL::Direction::South, 7 * TileSize + Lane1, -IntersectionSize)
+                      is_priority ? VehiclePriority.new(GSDL::Direction::South, 7 * TileSize + Lane1, -IntersectionSize) : VehicleCivilian.new(GSDL::Direction::South, 7 * TileSize + Lane1, -IntersectionSize)
                     when 3 # Northbound
-                      Vehicle.new(vehicle_type, GSDL::Direction::North, 7 * TileSize + Lane4, 13 * TileSize + IntersectionSize)
+                      is_priority ? VehiclePriority.new(GSDL::Direction::North, 7 * TileSize + Lane4, 13 * TileSize + IntersectionSize) : VehicleCivilian.new(GSDL::Direction::North, 7 * TileSize + Lane4, 13 * TileSize + IntersectionSize)
                     end
 
       if new_vehicle

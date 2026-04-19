@@ -35,6 +35,41 @@ module Traffic
       update_frustration(dt)
     end
 
+    def setup_animations(sprite : GSDL::AnimatedSprite, kind : Symbol)
+      case kind
+      when :eb
+        sprite.add("idle", [0], fps: 0)
+        sprite.add("blink_right", [2, 0], fps: 3)
+        sprite.add("blink_left", [0], fps: 3)
+        sprite.add("brake", [1], fps: 0)
+        sprite.add("brake_blink_right", [3, 1], fps: 3)
+        sprite.add("brake_blink_left", [1], fps: 0)
+      when :wb
+        sprite.add("idle", [0], fps: 0)
+        sprite.add("blink_right", [0], fps: 0)
+        sprite.add("blink_left", [2, 0], fps: 3)
+        sprite.add("brake", [1], fps: 0)
+        sprite.add("brake_blink_right", [1], fps: 0)
+        sprite.add("brake_blink_left", [3, 0], fps: 3)
+      when :nb
+        sprite.add("idle", [0], fps: 0)
+        sprite.add("blink_right", [1, 0], fps: 3)
+        sprite.add("blink_left", [2, 0], fps: 3)
+        sprite.add("brake", [3], fps: 0)
+        sprite.add("brake_blink_right", [5, 3], fps: 3)
+        sprite.add("brake_blink_left", [4, 3], fps: 3)
+      when :sb
+        sprite.add("idle", [0], fps: 0)
+        sprite.add("blink_right", [2, 0], fps: 3)
+        sprite.add("blink_left", [1, 0], fps: 3)
+        sprite.add("brake", [0], fps: 0)
+        sprite.add("brake_blink_right", [2, 0], fps: 3)
+        sprite.add("brake_blink_left", [1, 0], fps: 3)
+      end
+
+      sprite.play("idle")
+    end
+
     private def update_frustration(dt : Float32)
       if @waiting
         @frustration += dt * FrustrationRate

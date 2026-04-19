@@ -29,6 +29,16 @@ module Traffic
       {32, 64}
     end
 
+    def setup_animations(sprite : GSDL::AnimatedSprite, kind : Symbol)
+      sprite.add("idle", [0], fps: 0)
+      sprite.add("blink_right", [0], fps: 0)
+      sprite.add("blink_left", [0], fps: 0)
+      sprite.add("brake", [0], fps: 0)
+      sprite.add("brake_blink_right", [0], fps: 0)
+      sprite.add("brake_blink_left", [0], fps: 0)
+      sprite.play("idle")
+    end
+
     def update_special_behavior(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
       decay_rate = 1.0_f32
       decay_rate = is_waiting_on_wreck?(all_vehicles) ? 10.0_f32 : 3.0_f32 if @waiting

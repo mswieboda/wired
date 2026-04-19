@@ -30,7 +30,8 @@ module Traffic
     @safety_timer : GSDL::Timer? = nil
     
     @direction : GSDL::Direction = GSDL::Direction::East
-    @sprite_ew : GSDL::AnimatedSprite
+    @sprite_eb : GSDL::AnimatedSprite
+    @sprite_wb : GSDL::AnimatedSprite
     @sprite_nb : GSDL::AnimatedSprite
     @sprite_sb : GSDL::AnimatedSprite
     @active_sprite : GSDL::AnimatedSprite
@@ -50,6 +51,7 @@ module Traffic
 
     abstract def update_special_behavior(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
     abstract def draw_status_overlay(draw : GSDL::Draw, th : Float32, cam_x : Float32, cam_y : Float32)
+    abstract def setup_animations(sprite : GSDL::AnimatedSprite, kind : Symbol)
 
     def initialize(@direction : GSDL::Direction, x : Int32 | Float32, y : Int32 | Float32)
       @x = x.to_f32
@@ -66,37 +68,34 @@ module Traffic
       # 1. Create sprites
       hw, hh = h_dims
       vw, vh = v_dims
-      @sprite_ew = GSDL::AnimatedSprite.new("#{asset_prefix}-eb", hw, hh, origin: {0.5_f32, 0.5_f32})
+      @sprite_eb = GSDL::AnimatedSprite.new("#{asset_prefix}-eb", hw, hh, origin: {0.5_f32, 0.5_f32})
+      @sprite_wb = GSDL::AnimatedSprite.new("#{asset_prefix}-eb", hw, hh, origin: {0.5_f32, 0.5_f32})
       @sprite_nb = GSDL::AnimatedSprite.new("#{asset_prefix}-nb", vw, vh, origin: {0.5_f32, 0.5_f32})
       @sprite_sb = GSDL::AnimatedSprite.new("#{asset_prefix}-sb", vw, vh, origin: {0.5_f32, 0.5_f32})
       
+      @sprite_wb.flip_h = true
+
       # 2. Set @active_sprite immediately
       @active_sprite = case @direction
+                       when .east?  then @sprite_eb
+                       when .west?  then @sprite_wb
                        when .north? then @sprite_nb
                        when .south? then @sprite_sb
-                       else @sprite_ew
+                       else @sprite_eb
                        end
 
       # 3. Safe to use self/methods now
-      setup_animations(@sprite_ew)
-      setup_animations(@sprite_nb)
-      setup_animations(@sprite_sb)
+      setup_animations(@sprite_eb, :eb)
+      setup_animations(@sprite_wb, :wb)
+      setup_animations(@sprite_nb, :nb)
+      setup_animations(@sprite_sb, :sb)
       
-      add_child(@sprite_ew)
+      add_child(@sprite_eb)
+      add_child(@sprite_wb)
       add_child(@sprite_nb)
       add_child(@sprite_sb)
       
       update_active_visibility
-    end
-
-    private def setup_animations(sprite)
-      sprite.add("idle", [0], fps: 1)
-      sprite.add("blink_right", [0], fps: 1)
-      sprite.add("blink_left", [0], fps: 1)
-      sprite.add("brake", [0], fps: 1)
-      sprite.add("brake_blink_right", [0], fps: 1)
-      sprite.add("brake_blink_left", [0], fps: 1)
-      sprite.play("idle")
     end
 
     def direction
@@ -112,17 +111,19 @@ module Traffic
 
     private def select_sprite_for_dir(dir) : GSDL::AnimatedSprite
       case dir
+      when .east?  then @sprite_eb
+      when .west?  then @sprite_wb
       when .north? then @sprite_nb
       when .south? then @sprite_sb
-      else @sprite_ew
+      else @sprite_eb
       end
     end
 
     private def update_active_visibility
-      @sprite_ew.visible = @sprite_ew.active = (@active_sprite == @sprite_ew)
+      @sprite_eb.visible = @sprite_eb.active = (@active_sprite == @sprite_eb)
+      @sprite_wb.visible = @sprite_wb.active = (@active_sprite == @sprite_wb)
       @sprite_nb.visible = @sprite_nb.active = (@active_sprite == @sprite_nb)
       @sprite_sb.visible = @sprite_sb.active = (@active_sprite == @sprite_sb)
-      @active_sprite.flip_h = @direction.west?
     end
 
     def width
@@ -142,6 +143,7 @@ module Traffic
     end
 
     def collision_bounding_box : GSDL::FRect
+      # Collision box relative to Entity position (0,0)
       GSDL::FRect.new(-width / 2.0_f32, -height / 2.0_f32, width.to_f32, height.to_f32)
     end
 
@@ -176,10 +178,12 @@ module Traffic
 
     def calculate_path(intersections : Array(Intersection))
       @path.clear
+
       current_dir = self.direction
       current_x = self.x
       current_y = self.y
       will_turn_left = Random.rand < 0.2
+
       10.times do
         next_inter = intersections.select do |inter|
           ix, iy = inter.tile_x * TileSize + TileSize, inter.tile_y * TileSize + TileSize
@@ -194,10 +198,14 @@ module Traffic
           ix, iy = inter.tile_x * TileSize + TileSize, inter.tile_y * TileSize + TileSize
           (ix - current_x).abs + (iy - current_y).abs
         end
+
         break unless next_inter
+
         roll = Random.rand
+
         if will_turn_left && roll < 0.4
-          @path << IntersectionAction::Left; will_turn_left = false
+          @path << IntersectionAction::Left
+          will_turn_left = false
           current_x, current_y = next_inter.tile_x * TileSize + TileSize, next_inter.tile_y * TileSize + TileSize
           current_dir = case current_dir
                         when .east?  then GSDL::Direction::North
@@ -221,6 +229,7 @@ module Traffic
           current_x, current_y = next_inter.tile_x * TileSize + TileSize, next_inter.tile_y * TileSize + TileSize
         end
       end
+
       @next_action = @path.shift? || IntersectionAction::Straight
     end
 

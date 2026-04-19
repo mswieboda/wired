@@ -41,14 +41,14 @@ module Traffic
       GSDL::Data.increment("total_escorted", 0)
       GSDL::Data.increment("ambulances", 0)
       GSDL::Data.increment("police", 0)
-      GSDL::Data.increment("limos", 0)
+      GSDL::Data.increment("vips", 0)
 
       hud = GSDL::HUD.new
 
       text_data_template = "Total: {total_escorted}\n" \
         "<c:red>A</c>: {ambulances} " \
         "<c:blue>P</c>: {police} " \
-        "<c:gold>V</c>: {limos}"
+        "<c:gold>V</c>: {vips}"
       hud << GSDL::HUDText.new(
         text_data_template: text_data_template,
         anchor: GSDL::Anchor::TopRight,

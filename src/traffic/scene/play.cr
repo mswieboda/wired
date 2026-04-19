@@ -116,7 +116,7 @@ module Traffic
 
     private def spawn_vehicle
       # Adjusted based on traffic.json: Row 6,7 is road. Col 7,8 is road.
-      is_priority = Random.rand < 0.75
+      is_priority = Random.rand < 0.1
       choice = Random.rand(4)
 
       # For initial spawn, we don't know if we need to switch yet.

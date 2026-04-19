@@ -20,7 +20,23 @@ module Traffic
         ui_hover: "#99FF33",    # white
         main: "#99FF33",        # neon Lime
         grass: "#396313",       # darkish olive green
-        highlight_alt: GSDL::Color.new(g: 100, b:255, a: 128), # Transparent Blue
+        highlight_alt: GSDL::Color.new(g: 102, b: 255, a: 128), # Transparent Blue
+        
+        # Car Paint Colors
+        car_red: GSDL::Color.from_hex("#f50909"),
+        car_green: GSDL::Color.from_hex("#0909f5"),
+        car_blue: GSDL::Color.from_hex("#0909f5"),
+        car_yellow: GSDL::Color.from_hex("#f5f509"),
+        car_silver: GSDL::Color.gray(192),
+        car_gray: GSDL::Color.gray(96),
+        car_dark_green: GSDL::Color.new(g: 102),
+        car_black: GSDL::Color.gray(51),
+        car_dark_red: GSDL::Color.new(r: 102),
+        car_teal: GSDL::Color.new(g: 102, b: 102),
+        car_dark_blue: GSDL::Color.new(b: 102),
+        
+        # Wrecked Color
+        wrecked: GSDL::Color.gray(v: 51, a: 51)
       )
     end
 
@@ -48,12 +64,18 @@ module Traffic
         {"traffic-signal-eb", "gfx/traffic-signal-eb.png"},
         {"traffic-signal-sb", "gfx/traffic-signal-sb.png"},
         {"traffic-signal-wb", "gfx/traffic-signal-wb.png"},
-        {"car-eb", "gfx/car-eb.png"},
-        {"car-nb", "gfx/car-nb.png"},
-        {"car-sb", "gfx/car-sb.png"},
-        {"ambulance-eb", "gfx/ambulance-eb.png"},
-        {"ambulance-nb", "gfx/ambulance-nb.png"},
-        {"ambulance-sb", "gfx/ambulance-sb.png"},
+        {"car-eb-body", "gfx/car-eb-body.png"},
+        {"car-eb-top", "gfx/car-eb-top.png"},
+        {"car-nb-body", "gfx/car-nb-body.png"},
+        {"car-nb-top", "gfx/car-nb-top.png"},
+        {"car-sb-body", "gfx/car-sb-body.png"},
+        {"car-sb-top", "gfx/car-sb-top.png"},
+        {"ambulance-eb-body", "gfx/ambulance-eb-body.png"},
+        {"ambulance-eb-top", "gfx/ambulance-eb-top.png"},
+        {"ambulance-nb-body", "gfx/ambulance-nb-body.png"},
+        {"ambulance-nb-top", "gfx/ambulance-nb-top.png"},
+        {"ambulance-sb-body", "gfx/ambulance-sb-body.png"},
+        {"ambulance-sb-top", "gfx/ambulance-sb-top.png"},
       ]
     end
 

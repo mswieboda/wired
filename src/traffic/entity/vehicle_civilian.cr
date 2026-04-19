@@ -10,6 +10,23 @@ module Traffic
 
     def initialize(direction : GSDL::Direction, x : Int32 | Float32, y : Int32 | Float32)
       super
+      
+      # Assign random paint color
+      colors = [
+        :car_red,
+        :car_green,
+        :car_blue,
+        :car_yellow,
+        :car_silver,
+        :car_gray,
+        :car_dark_green,
+        :car_black,
+        :car_dark_red,
+        :car_teal,
+        :car_dark_blue,
+      ]
+
+      @paint_color = GSDL::ColorScheme.get(colors.sample)
       @honk_timer = GSDL::Timer.new(Time::Span.new(seconds: Random.rand(4..8)))
       @honk_timer.start
       @rage_cooldown = GSDL::Timer.new(2.seconds)

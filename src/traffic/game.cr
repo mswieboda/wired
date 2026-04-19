@@ -42,11 +42,11 @@ module Traffic
     def load_textures : Array(Tuple(String, String))
       [
         {"tiles", "gfx/tiles.png"},
-        {"traffic-signal-ns", "gfx/traffic-signal-ns.png"},
-        {"traffic-signal-ew", "gfx/traffic-signal-ew.png"},
-        {"car_east", "gfx/car_east.png"},
-        {"car_north", "gfx/car_north.png"},
-        {"car_south", "gfx/car_south.png"},
+        {"traffic-signal-nb", "gfx/traffic-signal-nb.png"},
+        {"traffic-signal-eb", "gfx/traffic-signal-eb.png"},
+        {"car-eb", "gfx/car-eb.png"},
+        {"car-nb", "gfx/car-nb.png"},
+        {"car-sb", "gfx/car-sb.png"},
       ]
     end
 

@@ -15,6 +15,7 @@ module Traffic
     property state : IntersectionSignal = IntersectionSignal::GreenNS
     getter tile_x : Int32
     getter tile_y : Int32
+
     @state_timer : GSDL::Timer
     @tile_x : Int32
     @tile_y : Int32
@@ -27,14 +28,14 @@ module Traffic
 
       ns_x = px + (IntersectionSize - 12.0_f32)
       ns_y = py + 16.0_f32
-      @signal_ns = TrafficSignal.new("traffic-signal-ns", ns_x, ns_y)
+      @signal_ns = TrafficSignal.new("traffic-signal-nb", ns_x, ns_y)
 
       ew_x = px + 16.0_f32
       ew_y = py + (IntersectionSize - 36.0_f32)
-      @signal_ew = TrafficSignal.new("traffic-signal-ew", ew_x, ew_y)
+      @signal_ew = TrafficSignal.new("traffic-signal-eb", ew_x, ew_y)
 
       # We don't use the base sprite for drawing anymore, but we must initialize it
-      super("traffic-signal-ns", px, py)
+      super("traffic-signal-nb", px, py)
 
       @state = IntersectionSignal::GreenNS
       update_signal_frames

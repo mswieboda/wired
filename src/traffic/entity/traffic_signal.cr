@@ -4,8 +4,8 @@ module Traffic
       super(key, 16, 64, x, y)
       self.rotation = rotation
 
-      # Setup a dummy animation so frame_index works for all 4 frames
-      add("static", [0, 1, 2, 3], fps: 1)
+      # Setup a dummy animation so frame_index works for all 5 frames
+      add("static", [0, 1, 2, 3, 4], fps: 1)
       play("static")
       @animation_player.pause
     end
@@ -22,19 +22,19 @@ module Traffic
       self.frame = 1
     end
 
-    def show_red_turn_green
+    def show_red
       self.frame = 2
     end
 
-    def show_red_turn_yellow
+    def show_red_full
+      self.frame = 2
+    end
+
+    def show_red_turn_green
       self.frame = 3
     end
 
-    # Assuming frame 3 (Red + Turn Yellow) is the fallback for "Red"
-    # if no specific Red frame exists, or perhaps it's intended
-    # to be used when the other side is Green.
-    def show_red
-      self.frame = 3
-    end
-  end
+    def show_red_turn_yellow
+      self.frame = 4
+    end  end
 end

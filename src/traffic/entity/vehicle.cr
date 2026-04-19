@@ -82,9 +82,9 @@ module Traffic
 
     private def current_texture_key : String
       case self.direction
-      when .north? then "car_north"
-      when .south? then "car_south"
-      else "car_east"
+      when .north? then "car-nb"
+      when .south? then "car-sb"
+      else "car-eb"
       end
     end
 
@@ -479,17 +479,39 @@ module Traffic
           case self.direction
           when .north?, .south?
             case inter.state
-            when .green_ns?      then (@waiting = true; return) if @next_action.left?
-            when .green_ns_left? then (@waiting = true; return) unless @next_action.left?
-            when .yellow_ns?, .yellow_ns_left? then (@waiting = true; return) if dist_to_line > 32.0_f32
-            when .all_red?, .green_ew?, .yellow_ew?, .green_ew_left?, .yellow_ew_left? then @waiting = true; return
+            when .green_ns?
+              # Straight/Right go, Left waits
+              @waiting = true if @next_action.left?
+            when .yellow_ns?
+              # Straight/Right might go if close, Left waits
+              @waiting = true if @next_action.left? || dist_to_line > 32.0_f32
+            when .green_ns_left?
+              # Left goes, Straight/Right waits
+              @waiting = true unless @next_action.left?
+            when .yellow_ns_left?
+              # Left might go if close, Straight/Right MUST wait
+              @waiting = true if !@next_action.left? || dist_to_line > 32.0_f32
+            else
+              # AllRed or EW states
+              @waiting = true
             end
           when .east?, .west?
             case inter.state
-            when .green_ew?      then (@waiting = true; return) if @next_action.left?
-            when .green_ew_left? then (@waiting = true; return) unless @next_action.left?
-            when .yellow_ew?, .yellow_ew_left? then (@waiting = true; return) if dist_to_line > 32.0_f32
-            when .all_red?, .green_ns?, .yellow_ns?, .green_ns_left?, .yellow_ns_left? then @waiting = true; return
+            when .green_ew?
+              # Straight/Right go, Left waits
+              @waiting = true if @next_action.left?
+            when .yellow_ew?
+              # Straight/Right might go if close, Left waits
+              @waiting = true if @next_action.left? || dist_to_line > 32.0_f32
+            when .green_ew_left?
+              # Left goes, Straight/Right waits
+              @waiting = true unless @next_action.left?
+            when .yellow_ew_left?
+              # Left might go if close, Straight/Right MUST wait
+              @waiting = true if !@next_action.left? || dist_to_line > 32.0_f32
+            else
+              # AllRed or NS states
+              @waiting = true
             end
           else # ignore
           end

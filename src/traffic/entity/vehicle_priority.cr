@@ -30,7 +30,7 @@ module Traffic
     end
 
     def setup_animations(sprite : GSDL::AnimatedSprite, kind : Symbol)
-      sprite.add("idle", [0], fps: 0)
+      sprite.add("idle", [0, 0, 1, 2, 1, 2, 1, 2, 1, 2], fps: 6)
       sprite.add("blink_right", [0], fps: 0)
       sprite.add("blink_left", [0], fps: 0)
       sprite.add("brake", [0], fps: 0)

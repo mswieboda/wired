@@ -24,8 +24,10 @@ module Traffic
     @state_timer : GSDL::Timer
     @tile_x : Int32
     @tile_y : Int32
-    @signal_ns : TrafficSignal
-    @signal_ew : TrafficSignal
+    @signal_nb : TrafficSignal
+    @signal_eb : TrafficSignal
+    @signal_sb : TrafficSignal
+    @signal_wb : TrafficSignal
 
     def initialize(@tile_x, @tile_y)
       @x = @tile_x * TileSize
@@ -33,17 +35,30 @@ module Traffic
       @state = IntersectionSignal::GreenNS
       @state_timer = GSDL::Timer.new(GreenDuration.seconds)
 
-      # Position children relative to parent (Intersection at 0, 0)
-      ns_x = IntersectionSize - 12.0_f32
-      ns_y = 16.0_f32
-      @signal_ns = TrafficSignal.new("traffic-signal-nb", ns_x, ns_y)
+      # Position children relative to parent
+      offset = 12_f32
+      origin = {0.5_f32, 1_f32}
 
-      ew_x = 16.0_f32
-      ew_y = IntersectionSize - 36.0_f32
-      @signal_ew = TrafficSignal.new("traffic-signal-eb", ew_x, ew_y)
+      # north-bound
+      offset_x = IntersectionSize - offset
+      @signal_nb = TrafficSignal.new("traffic-signal-nb", offset_x, offset, origin)
 
-      add_child(@signal_ns)
-      add_child(@signal_ew)
+      # east-bound
+      offset_x = IntersectionSize - offset
+      offset_y = IntersectionSize - offset
+      @signal_eb = TrafficSignal.new("traffic-signal-eb", offset_x, offset_y, origin)
+
+      # south-bound
+      offset_y = IntersectionSize - offset
+      @signal_sb = TrafficSignal.new("traffic-signal-sb", offset, offset_y, origin)
+
+      # west-bound
+      @signal_wb = TrafficSignal.new("traffic-signal-wb", offset, offset, origin)
+
+      add_child(@signal_nb)
+      add_child(@signal_eb)
+      add_child(@signal_sb)
+      add_child(@signal_wb)
 
       update_signal_frames
       @state_timer.start
@@ -92,32 +107,50 @@ module Traffic
     def update_signal_frames
       case @state
       when .green_ns?
-        @signal_ns.show_green
-        @signal_ew.show_red
+        @signal_nb.show_green
+        @signal_sb.show_green
+        @signal_eb.show_red
+        @signal_wb.show_red
       when .yellow_ns?
-        @signal_ns.show_yellow
-        @signal_ew.show_red
+        @signal_nb.show_yellow
+        @signal_sb.show_yellow
+        @signal_eb.show_red
+        @signal_wb.show_red
       when .green_ns_left?
-        @signal_ns.show_red_turn_green
-        @signal_ew.show_red
+        @signal_nb.show_red_turn_green
+        @signal_sb.show_red_turn_green
+        @signal_eb.show_red
+        @signal_wb.show_red
       when .yellow_ns_left?
-        @signal_ns.show_red_turn_yellow
-        @signal_ew.show_red
+        @signal_nb.show_red_turn_yellow
+        @signal_sb.show_red_turn_yellow
+        @signal_eb.show_red
+        @signal_wb.show_red
       when .green_ew?
-        @signal_ns.show_red
-        @signal_ew.show_green
+        @signal_nb.show_red
+        @signal_sb.show_red
+        @signal_eb.show_green
+        @signal_wb.show_green
       when .yellow_ew?
-        @signal_ns.show_red
-        @signal_ew.show_yellow
+        @signal_nb.show_red
+        @signal_sb.show_red
+        @signal_eb.show_yellow
+        @signal_wb.show_yellow
       when .green_ew_left?
-        @signal_ns.show_red
-        @signal_ew.show_red_turn_green
+        @signal_nb.show_red
+        @signal_sb.show_red
+        @signal_eb.show_red_turn_green
+        @signal_wb.show_red_turn_green
       when .yellow_ew_left?
-        @signal_ns.show_red
-        @signal_ew.show_red_turn_yellow
+        @signal_nb.show_red
+        @signal_sb.show_red
+        @signal_eb.show_red_turn_yellow
+        @signal_wb.show_red_turn_yellow
       when .all_red?
-        @signal_ns.show_red
-        @signal_ew.show_red
+        @signal_nb.show_red
+        @signal_sb.show_red
+        @signal_eb.show_red
+        @signal_wb.show_red
       end
     end
 
@@ -152,8 +185,10 @@ module Traffic
     end
 
     def draw(draw : GSDL::Draw)
-      @signal_ns.z_index = z_index
-      @signal_ew.z_index = z_index
+      @signal_nb.z_index = z_index
+      @signal_eb.z_index = z_index
+      @signal_sb.z_index = z_index
+      @signal_wb.z_index = z_index
       super(draw)
     end
   end

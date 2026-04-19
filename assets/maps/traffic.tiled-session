@@ -3,12 +3,31 @@
         "height": 4300,
         "width": 2
     },
-    "activeFile": "",
+    "activeFile": "traffic.tmx",
     "expandedProjectPaths": [
+        "."
     ],
     "fileStates": {
         "#tiles": {
             "scaleInDock": 0.2399
+        },
+        "tiles.tsx": {
+            "scaleInDock": 0.5223,
+            "scaleInEditor": 1
+        },
+        "traffic.tmx": {
+            "expandedGroupLayers": [
+                2
+            ],
+            "scale": 0.7395,
+            "selectedLayer": 0,
+            "viewCenter": {
+                "x": 1109.5334685598377,
+                "y": 875.5916159567275
+            }
+        },
+        "traffic.tmx#tiles": {
+            "scaleInDock": 1
         }
     },
     "last.exportedFilePath": "/Users/matt/code/cr/traffic/assets/maps",
@@ -20,9 +39,13 @@
     "map.tileWidth": 128,
     "map.width": 10,
     "openFiles": [
+        "traffic.tmx",
+        "tiles.tsx"
     ],
     "project": "traffic.tiled-project",
     "recentFiles": [
+        "tiles.tsx",
+        "traffic.tmx"
     ],
     "tileset.embedInMap": false,
     "tileset.lastUsedFormat": "tsx",

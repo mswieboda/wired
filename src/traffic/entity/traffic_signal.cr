@@ -1,10 +1,16 @@
 module Traffic
   class TrafficSignal < GSDL::AnimatedSprite
-    def initialize(key : String, x, y, rotation = 0.0_f32)
-      super(key, 16, 64, x, y)
-      self.rotation = rotation
+    def initialize(key : String, x, y, origin = {0_f32, 0_f32})
+      super(
+        key: key,
+        width: 16,
+        height: 64,
+        x: x,
+        y: y,
+        origin: origin,
+      )
 
-      # Setup a dummy animation so frame_index works for all 5 frames
+      # Setup a static animation so frame_index works for all 5 frames
       add("static", [0, 1, 2, 3, 4], fps: 1)
       play("static")
       @animation_player.pause

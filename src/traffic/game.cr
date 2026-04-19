@@ -44,6 +44,8 @@ module Traffic
         {"tiles", "gfx/tiles.png"},
         {"traffic-signal-nb", "gfx/traffic-signal-nb.png"},
         {"traffic-signal-eb", "gfx/traffic-signal-eb.png"},
+        {"traffic-signal-sb", "gfx/traffic-signal-sb.png"},
+        {"traffic-signal-wb", "gfx/traffic-signal-wb.png"},
         {"car-eb", "gfx/car-eb.png"},
         {"car-nb", "gfx/car-nb.png"},
         {"car-sb", "gfx/car-sb.png"},

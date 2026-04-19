@@ -110,30 +110,29 @@ module Traffic
 
     private def spawn_vehicle
       # Adjusted based on traffic.json: Row 6,7 is road. Col 7,8 is road.
-      is_priority = Random.rand < 0.1
+      is_priority = Random.rand < 0.5
       choice = Random.rand(4)
 
       # For initial spawn, we don't know if we need to switch yet.
       # Pathfinding is done AFTER creation.
-      new_vehicle = case choice
-                    when 0 # Eastbound (Horizontal road at row 6,7)
-                      is_priority ? VehiclePriority.new(GSDL::Direction::East, -IntersectionSize, 6 * TileSize + Lane4) : VehicleCivilian.new(GSDL::Direction::East, -IntersectionSize, 6 * TileSize + Lane4)
-                    when 1 # Westbound
-                      is_priority ? VehiclePriority.new(GSDL::Direction::West, 14 * TileSize + IntersectionSize, 6 * TileSize + Lane1) : VehicleCivilian.new(GSDL::Direction::West, 14 * TileSize + IntersectionSize, 6 * TileSize + Lane1)
-                    when 2 # Southbound (Vertical road at col 7,8)
-                      is_priority ? VehiclePriority.new(GSDL::Direction::South, 7 * TileSize + Lane1, -IntersectionSize) : VehicleCivilian.new(GSDL::Direction::South, 7 * TileSize + Lane1, -IntersectionSize)
-                    when 3 # Northbound
-                      is_priority ? VehiclePriority.new(GSDL::Direction::North, 7 * TileSize + Lane4, 13 * TileSize + IntersectionSize) : VehicleCivilian.new(GSDL::Direction::North, 7 * TileSize + Lane4, 13 * TileSize + IntersectionSize)
-                    end
+      kclass = is_priority ? VehiclePriority : VehicleCivilian
+      new_vehicle = kclass.new(GSDL::Direction::East, -IntersectionSize, 6 * TileSize + Lane4)
 
-      if new_vehicle
-        new_vehicle.calculate_path(@intersections)
-
-        # Safety check: do not spawn if overlapping another vehicle
-        if @vehicles.none? { |v| v.collides?(new_vehicle) }
-          @vehicles << new_vehicle
-        end
+      case choice
+      when 0 # Eastbound (Horizontal road at row 6,7)
+        new_vehicle = kclass.new(GSDL::Direction::East, -IntersectionSize, 6 * TileSize + Lane4)
+      when 1 # Westbound
+        new_vehicle = kclass.new(GSDL::Direction::West, 14 * TileSize + IntersectionSize, 6 * TileSize + Lane1)
+      when 2 # Southbound (Vertical road at col 7,8)
+        new_vehicle = kclass.new(GSDL::Direction::South, 7 * TileSize + Lane1, -IntersectionSize)
+      when 3 # Northbound
+        new_vehicle = kclass.new(GSDL::Direction::North, 7 * TileSize + Lane4, 13 * TileSize + IntersectionSize)
       end
+
+      new_vehicle.calculate_path(@intersections)
+
+      # Safety check: do not spawn if overlapping another vehicle
+      @vehicles << new_vehicle if @vehicles.none?(&.collides?(new_vehicle))
     end
 
     def draw(draw : GSDL::Draw)

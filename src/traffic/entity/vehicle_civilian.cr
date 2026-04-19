@@ -27,6 +27,10 @@ module Traffic
       (200.0_f32)..(350.0_f32)
     end
 
+    def asset_prefix : String
+      "car"
+    end
+
     def update_special_behavior(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
       update_frustration(dt)
     end
@@ -62,10 +66,6 @@ module Traffic
 
     def road_rage?
       @frustration >= PatienceThresholds::ROAD_RAGE
-    end
-
-    def tint_color : GSDL::Color
-      @wrecked ? GSDL::Color.new(40, 40, 40) : GSDL::Color::White
     end
 
     def draw_status_overlay(draw : GSDL::Draw, th : Float32, cam_x : Float32, cam_y : Float32)

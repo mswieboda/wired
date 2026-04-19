@@ -50,6 +50,9 @@ module Traffic
         {"car-eb", "gfx/car-eb.png"},
         {"car-nb", "gfx/car-nb.png"},
         {"car-sb", "gfx/car-sb.png"},
+        {"ambulance-eb", "gfx/ambulance-eb.png"},
+        {"ambulance-nb", "gfx/ambulance-nb.png"},
+        {"ambulance-sb", "gfx/ambulance-sb.png"},
       ]
     end
 

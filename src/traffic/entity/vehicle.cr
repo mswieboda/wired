@@ -32,9 +32,9 @@ module Traffic
     abstract def priority? : Bool
     abstract def skips_red_lights? : Bool
     abstract def base_speed_range : Range(Float32, Float32)
+    abstract def asset_prefix : String
     abstract def update_special_behavior(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
     abstract def draw_status_overlay(draw : GSDL::Draw, th : Float32, cam_x : Float32, cam_y : Float32)
-    abstract def tint_color : GSDL::Color
 
     def initialize(direction : GSDL::Direction, x : Int32 | Float32, y : Int32 | Float32)
       @yield_timer = GSDL::Timer.new(5.seconds)
@@ -61,11 +61,18 @@ module Traffic
       GSDL::TextureManager.get(current_texture_key).size[1].to_f32
     end
 
+    def tint_color : GSDL::Color
+      @wrecked ? GSDL::Color.gray(32) : GSDL::Color::White
+    end
+
     private def current_texture_key : String
       case self.direction
-      when .north? then "car-nb"
-      when .south? then "car-sb"
-      else "car-eb"
+      when .north?
+        "#{asset_prefix}-nb"
+      when .south?
+        "#{asset_prefix}-sb"
+      else
+        "#{asset_prefix}-eb"
       end
     end
 

@@ -111,8 +111,8 @@ module Traffic
 
         # target destinations
         {"hospital", "gfx/hospital.png"},
+        {"police-station", "gfx/police-station.png"},
         # (using placeholders)
-        {"precinct", "gfx/traffic-signal-eb.png"},
         {"penthouse", "gfx/traffic-signal-sb.png"},
       ]
     end

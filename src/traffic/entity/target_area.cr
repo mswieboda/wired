@@ -9,7 +9,7 @@ module Traffic
       
       asset = case @type
               when .target_ambulance? then "hospital"
-              when .target_police?    then "precinct"
+              when .target_police?    then "police-station"
               when .target_vip?       then "penthouse"
               else "hospital" # fallback
               end

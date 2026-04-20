@@ -74,28 +74,6 @@
                  "width":0,
                  "x":1152,
                  "y":256
-                }, 
-                {
-                 "height":0,
-                 "id":3,
-                 "name":"Penthouse",
-                 "properties":[
-                        {
-                         "name":"sprite_tile_offset_x",
-                         "type":"float",
-                         "value":-0.75
-                        }, 
-                        {
-                         "name":"sprite_tile_offset_y",
-                         "type":"float",
-                         "value":0
-                        }],
-                 "rotation":0,
-                 "type":"TargetVIP",
-                 "visible":true,
-                 "width":0,
-                 "x":896,
-                 "y":1152
                 }],
          "opacity":1,
          "type":"objectgroup",

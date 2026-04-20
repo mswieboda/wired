@@ -333,14 +333,14 @@ module Traffic
 
       @next_action = @path.shift? || IntersectionAction::Straight
 
-      if priority?
-        puts "Priority #{asset_prefix} Path Generated:"
-        puts "  Spawn: #{x.to_i}, #{y.to_i} (Tile: #{(x/TileSize).to_i}, #{(y/TileSize).to_i})"
-        puts "  Target: #{target.type} at #{target.x}, #{target.y}"
-        puts "  Nodes: #{@node_path.map(&.type).join(" -> ")}"
-        puts "  Actions: #{action_logs.join(" -> ")}"
-        puts "  Current Action: [#{@next_action}] | Queue: #{@path.to_a.join(", ")}"
-      end
+      # if priority?
+      #   puts "Priority #{asset_prefix} Path Generated:"
+      #   puts "  Spawn: #{x.to_i}, #{y.to_i} (Tile: #{(x/TileSize).to_i}, #{(y/TileSize).to_i})"
+      #   puts "  Target: #{target.type} at #{target.x}, #{target.y}"
+      #   puts "  Nodes: #{@node_path.map(&.type).join(" -> ")}"
+      #   puts "  Actions: #{action_logs.join(" -> ")}"
+      #   puts "  Current Action: [#{@next_action}] | Queue: #{@path.to_a.join(", ")}"
+      # end
     end
 
     def draw_path(draw : GSDL::Draw, intersections : Array(Intersection))
@@ -492,7 +492,7 @@ module Traffic
            # Snap to exact target coordinates
            target = @target_node.not_nil!
            unless @target_wait_timer.running? || @target_wait_timer.done?
-             puts "Priority #{asset_prefix} ARRIVED at #{target.type}! Snapping to #{target.x}, #{target.y}"
+             # puts "Priority #{asset_prefix} ARRIVED at #{target.type}! Snapping to #{target.x}, #{target.y}"
              @target_wait_timer.start
            end
 

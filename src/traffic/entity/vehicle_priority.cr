@@ -141,7 +141,7 @@ module Traffic
     end
 
     def draw_status_overlay(draw : GSDL::Draw, th : Float32, cam_x : Float32, cam_y : Float32)
-      # Priority-specific status (e.g. destination time) can be added here if needed
+      # Priority-specific status (destination time) progress bar
       bar_w, bar_h = 48.0_f32, 12.0_f32
       bar_x, bar_y = self.x - (bar_w / 2.0_f32), self.y - (th / 2.0_f32) - 12.0_f32
 
@@ -154,10 +154,6 @@ module Traffic
         color: GSDL::Color.new(30, 30, 30, 150),
         z_index: z_index + 1
       ).draw(draw)
-
-      # ANXIOUS    = 5.0_f32
-      # FRUSTRATED = 20.0_f32
-      # ROAD_RAGE  = 35.0_f32
 
       percent = Math.min(1.0_f32, @time_to_destination / PriorityTimeToDestination)
       color = if percent >= 1.0

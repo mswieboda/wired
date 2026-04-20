@@ -87,26 +87,26 @@ module Traffic
                          true # No strict offset requirement
                        end
 
-            puts "Target #{target.type} accessibility check: #{is_valid} (Approach: #{final_approach_dir})"
+            # puts "Target #{target.type} accessibility check: #{is_valid} (Approach: #{final_approach_dir})"
             is_valid
           else
-            puts "Target #{target.type} rejected: No path found"
+            # puts "Target #{target.type} rejected: No path found"
             false
           end
         else
-          puts "Target #{target.type} rejected: No start node in front"
+          # puts "Target #{target.type} rejected: No start node in front"
           false
         end
       end
 
       # Fallback to random exit if no valid specific target found
       if valid_targets.empty?
-        puts "Priority vehicle #{@type} falling back to random Exit"
+        # puts "Priority vehicle #{@type} falling back to random Exit"
         valid_targets = graph.nodes.select(&.type.exit?)
       end
 
       @target_node = valid_targets.empty? ? nil : valid_targets.sample
-      puts "Priority vehicle #{@type} selected target: #{@target_node.try(&.type)} at #{@target_node.try(&.x)}, #{@target_node.try(&.y)}"
+      # puts "Priority vehicle #{@type} selected target: #{@target_node.try(&.type)} at #{@target_node.try(&.x)}, #{@target_node.try(&.y)}"
     end
 
     def asset_prefix : String

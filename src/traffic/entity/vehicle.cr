@@ -42,6 +42,7 @@ module Traffic
 
     @direction : GSDL::Direction = GSDL::Direction::East
     @hovered : Bool = false
+    @homing_park : Bool = false
 
     @sprite_eb_body : GSDL::Sprite
     @sprite_wb_body : GSDL::Sprite
@@ -250,6 +251,7 @@ module Traffic
     def calculate_path(graph : NodeGraph)
       @path.clear
       @node_path.clear
+      @homing_park = false
       return unless target = @target_node
 
       # 1. Find the nearest node in front of us to start the path
@@ -265,7 +267,7 @@ module Traffic
 
       unless start_node
         if priority?
-          puts "Priority #{asset_prefix} failed to find start node! (Pos: #{x},#{y} Dir: #{direction})"
+          # puts "Priority #{asset_prefix} failed to find start node! (Pos: #{x},#{y} Dir: #{direction})"
         end
         return
       end
@@ -275,7 +277,7 @@ module Traffic
       
       if @node_path.empty?
         if priority?
-          puts "Priority #{asset_prefix} failed to find path to #{target.type}! (Start: #{start_node.type} at #{start_node.x},#{start_node.y})"
+          # puts "Priority #{asset_prefix} failed to find path to #{target.type}! (Start: #{start_node.type} at #{start_node.x},#{start_node.y})"
         end
         return
       end
@@ -489,6 +491,7 @@ module Traffic
         if priority?
            # Snap to exact target coordinates
            target = @target_node.not_nil!
+           puts "Priority #{asset_prefix} ARRIVED at #{target.type}! Snapping to #{target.x}, #{target.y}"
            self.x = target.x
            self.y = target.y
 
@@ -537,10 +540,35 @@ module Traffic
       return unless priority? && (target = @target_node) && !target.type.exit?
 
       dist = distance_to(target.x, target.y)
-      return unless dist < 1.5_f32 * TileSize
+      return unless dist < 2.0_f32 * TileSize
 
-      # Perpendicular homing to handle off-lane target nodes
-      home_speed = 100.0_f32 * dt
+      # 1. Ensure we are in the correct lane before homing
+      if self.direction.north? || self.direction.south?
+        base_coord = 7.0_f32 * TileSize
+        current_val = self.x
+      else
+        base_coord = 6.0_f32 * TileSize
+        current_val = self.y
+      end
+
+      current_offset = current_val - base_coord
+      # Target outer lane based on travel direction
+      req_offset = (self.direction.north? || self.direction.east?) ? Lane4 : Lane1
+
+      # If more than 5px from target lane, let lane-switching handle it first
+      unless @homing_park
+        if (current_offset - req_offset).abs > 5.0_f32
+          return
+        else
+          puts "Priority #{asset_prefix} HANDOVER: Lane reached, starting parking homing."
+          @homing_park = true
+          @lane_state = LaneState::Stable
+        end
+      end
+
+      # 2. Perpendicular homing to handle off-lane target nodes
+      # Slightly faster than forward speed to ensure we hit the curb
+      home_speed = 150.0_f32 * dt
 
       # Check blind spot before homing (merging into parking area)
       tx, ty = self.x, self.y
@@ -560,20 +588,26 @@ module Traffic
       case self.direction
       when .north?, .south?
         diff = target.x - self.x
-        if diff.abs > 1.0_f32
+        if diff.abs < home_speed
+          self.x = target.x
+        else
           self.x += (diff > 0 ? home_speed : -home_speed)
         end
       when .east?, .west?
         diff = target.y - self.y
-        if diff.abs > 1.0_f32
+        if diff.abs < home_speed
+          self.y = target.y
+        else
           self.y += (diff > 0 ? home_speed : -home_speed)
         end
       end
+
+      puts "Priority #{asset_prefix} Homing: Dist: #{dist.to_i}, Offset: #{current_offset.to_i} -> Target: #{target.x.to_i},#{target.y.to_i}"
     end
 
     private def update_physics(dt : Float32)
       # Parking Brake: Slow down significantly when close to the target
-      parking_zone = 1.5_f32 * TileSize
+      parking_zone = 2.0_f32 * TileSize
       is_parking = priority? && (target = @target_node) && !target.type.exit? && distance_to(target.x, target.y) < parking_zone
 
       base_target_speed = @next_action.straight? ? @original_speed : @original_speed * 0.5_f32
@@ -651,7 +685,7 @@ module Traffic
     end
 
     private def update_lane_switching(dt : Float32, intersections : Array(Intersection), all_vehicles : Array(Vehicle))
-      return if @lane_state.switching?
+      return if @lane_state.switching? || @homing_park
 
       # Find next intersection distance
       next_inter = intersections.select do |inter|
@@ -668,16 +702,36 @@ module Traffic
         (ix - self.x).abs + (iy - self.y).abs
       end
 
-      return unless next_inter
-      dist = case self.direction
-             when .east?  then (next_inter.tile_x * TileSize) - self.x
-             when .west?  then self.x - (next_inter.tile_x * TileSize + IntersectionSize)
-             when .north? then self.y - (next_inter.tile_y * TileSize + IntersectionSize)
-             when .south? then (next_inter.tile_y * TileSize) - self.y
-             else 9999.0_f32
-             end
+      # Intersection distance
+      inter_dist = if next_inter
+                     case self.direction
+                     when .east?  then (next_inter.tile_x * TileSize) - self.x
+                     when .west?  then self.x - (next_inter.tile_x * TileSize + IntersectionSize)
+                     when .north? then self.y - (next_inter.tile_y * TileSize + IntersectionSize)
+                     when .south? then (next_inter.tile_y * TileSize) - self.y
+                     else 9999.0_f32
+                     end
+                   else
+                     9999.0_f32
+                   end
 
-      return if dist > SwitchZoneDist || dist < 0
+      # Target building distance
+      target_dist = if priority? && (target = @target_node) && !target.type.exit?
+                      distance_to(target.x, target.y)
+                    else
+                      9999.0_f32
+                    end
+
+      # Trigger logic:
+      # - Intersections require being within SwitchZoneDist.
+      # - Building destinations (priority only) trigger immediately once on the final segment 
+      #   (no more intersections between us and the target).
+      dist = Math.min(inter_dist, target_dist)
+      is_final_segment = (target_dist < 9000.0_f32) && (target_dist < inter_dist)
+
+      unless is_final_segment
+        return if dist > SwitchZoneDist || dist < 0
+      end
 
       # Correct base_coord for the specific 2-tile roads in this map
       if self.direction.north? || self.direction.south?
@@ -693,7 +747,7 @@ module Traffic
       # Required Offset
       req_offset = if @next_action.left?
                      (self.direction.north? || self.direction.east?) ? Lane3 : Lane2
-                   else # Straight or Right
+                   else # Straight, Right, or Parking at Building
                      (self.direction.north? || self.direction.east?) ? Lane4 : Lane1
                    end
 

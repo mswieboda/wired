@@ -51,7 +51,7 @@
                  "visible":true,
                  "width":0,
                  "x":512,
-                 "y":800
+                 "y":768
                 }, 
                 {
                  "height":0,
@@ -72,7 +72,7 @@
                  "type":"TargetPolice",
                  "visible":true,
                  "width":0,
-                 "x":1120,
+                 "x":1152,
                  "y":256
                 }, 
                 {
@@ -94,7 +94,7 @@
                  "type":"TargetVIP",
                  "visible":true,
                  "width":0,
-                 "x":928,
+                 "x":896,
                  "y":1152
                 }],
          "opacity":1,

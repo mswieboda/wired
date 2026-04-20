@@ -1,3 +1,5 @@
+require "./pause_scene"
+
 module Traffic
   class Scene::Play < GSDL::Scene
     @map : GSDL::TileMap
@@ -121,12 +123,14 @@ module Traffic
       @cop_ui_strikes.add("xxx", [0, 1, 2, 3], fps: 0)
       @cop_ui_strikes.play("xxx")
 
+      self.pause_scene = PauseScene.new
       self.hud = hud
     end
 
     def update(dt : Float32)
-      if GSDL::Keys.just_pressed?(GSDL::Keys::Escape)
+      if GSDL::Input.action?(:menu)
         exit_with_transition
+        return
       end
 
       update_spawner(dt)
@@ -235,21 +239,23 @@ module Traffic
             case vehicle.type
             when .ambulance?
               if vehicle.late_to_target?
-                xs = GSDL::Data.get("ambulances_x").as_i
-                xs += 1
-                xs = [xs, 3].min
-                GSDL::Data.set("ambulances_x", xs)
-                @ambulance_ui_strikes.as(GSDL::AnimatedSprite).frame_index = xs
+                add_x_check_for_game_over("ambulances", @ambulance_ui_strikes)
+                # xs = GSDL::Data.get("ambulances_x").as_i
+                # xs += 1
+                # xs = [xs, 3].min
+                # GSDL::Data.set("ambulances_x", xs)
+                # @ambulance_ui_strikes.as(GSDL::AnimatedSprite).frame_index = xs
               else
                 GSDL::Data.increment("ambulances", 1)
               end
             when .police?
               if vehicle.late_to_target?
-                xs = GSDL::Data.get("police_x").as_i
-                xs += 1
-                xs = [xs, 3].min
-                GSDL::Data.set("police_x", xs)
-                @ambulance_ui_strikes.as(GSDL::AnimatedSprite).frame_index = xs
+                add_x_check_for_game_over("police", @cop_ui_strikes)
+                # xs = GSDL::Data.get("police_x").as_i
+                # xs += 1
+                # xs = [xs, 3].min
+                # GSDL::Data.set("police_x", xs)
+                # @cop_ui_strikes.as(GSDL::AnimatedSprite).frame_index = xs
               else
                 GSDL::Data.increment("police", 1)
               end
@@ -266,6 +272,21 @@ module Traffic
         else
           false
         end
+      end
+    end
+
+    def add_x_check_for_game_over(type : String, strikes : GSDL::AnimatedSprite)
+      xs = GSDL::Data.get("#{type}_x").as_i
+      xs += 1
+      xs = [xs, 3].min
+      GSDL::Data.set("#{type}_x", xs)
+      # strikes.as(GSDL::AnimatedSprite).frame_index = xs
+      strikes.frame_index = xs
+
+      # game over check
+      if xs >= 3
+        # game over
+        Game.paused = true
       end
     end
 

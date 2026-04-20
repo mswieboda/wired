@@ -26,6 +26,7 @@ module Traffic
         ui_text: "#FFFFFF",     # white
         ui_text_alt: neon_lime, # Neon Lime
         ui_hover: neon_lime,    # neon
+        highlight: neon_lime,
         hud_main: "#FFFFFF",    # white
         main: neon_lime,        # neon Lime
         grass: "#396313",       # darkish olive green
@@ -56,6 +57,7 @@ module Traffic
     def init
       Game.draw.to_sdl.default_texture_scale_mode = LibSDL3::ScaleMode::Nearest
 
+      GSDL::Input.set(:menu) { GSDL::Keys.pressed?(GSDL::Keys::Escape) }
       GSDL::Input.set(:camera_up) { GSDL::Keys.pressed?([GSDL::Keys::W, GSDL::Keys::Up]) }
       GSDL::Input.set(:camera_down) { GSDL::Keys.pressed?([GSDL::Keys::S, GSDL::Keys::Down]) }
       GSDL::Input.set(:camera_left) { GSDL::Keys.pressed?([GSDL::Keys::A, GSDL::Keys::Left]) }

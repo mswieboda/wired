@@ -140,6 +140,7 @@ module Traffic
         {"honk", "sfx/honk.wav"},
         {"crash", "sfx/crash.wav"},
         {"rage_trigger", "sfx/rage_trigger.wav"},
+        {"siren", "sfx/siren.wav"},
       ]
     end
   end

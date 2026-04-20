@@ -307,6 +307,7 @@ module Traffic
       new_vehicle = if is_priority
                       # Randomly choose priority type (excluding VIP for now)
                       type = Random.rand < SpawnPriorityVehicleAmbulanceVsPoliceRatio ? PriorityType::Ambulance : PriorityType::Police
+                      GSDL::AudioManager.get("siren").play
                       VehiclePriority.new(dir, sx, sy, type)
                     else
                       VehicleCivilian.new(dir, sx, sy)

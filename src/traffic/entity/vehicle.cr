@@ -263,33 +263,82 @@ module Traffic
         end
       end.min_by? { |node| node.distance_to(self.x.to_f32, self.y.to_f32) }
 
-      return unless start_node
+      unless start_node
+        if priority?
+          puts "Priority #{asset_prefix} failed to find start node! (Pos: #{x},#{y} Dir: #{direction})"
+        end
+        return
+      end
 
       # 2. Find path to target
       @node_path = Pathfinder.find_path(start_node, target)
-      return if @node_path.empty?
+      
+      if @node_path.empty?
+        if priority?
+          puts "Priority #{asset_prefix} failed to find path to #{target.type}! (Start: #{start_node.type} at #{start_node.x},#{start_node.y})"
+        end
+        return
+      end
 
       # 3. Convert node sequence to IntersectionActions
-      current_dir = self.direction
-      if @node_path.size >= 2
-        (0...@node_path.size - 1).each do |i|
-          curr = @node_path[i]
-          nxt = @node_path[i + 1]
+      # Logic: For every Intersection node 'N' at index 'i', we need to know how to get
+      # from Node[i-1] to Node[i+1] via Node[i].
+      
+      # Determine initial direction from current pos to start_node
+      current_dir = if (start_node.x - self.x).abs < (start_node.y - self.y).abs
+                      start_node.y > self.y ? GSDL::Direction::South : GSDL::Direction::North
+                    else
+                      start_node.x > self.x ? GSDL::Direction::East : GSDL::Direction::West
+                    end
 
-          # Determine direction needed to get from curr to nxt
-          needed_dir = if (nxt.x - curr.x).abs < 1.0
-                         nxt.y > curr.y ? GSDL::Direction::South : GSDL::Direction::North
+      action_logs = [] of String
+
+      (0...@node_path.size).each do |i|
+        node = @node_path[i]
+        
+        # We only need steering actions for Intersections
+        if node.type.intersection?
+          # To determine the turn, we need the direction we entered from
+          # and the direction we need to exit to.
+          
+          # 1. Entrance direction
+          entrance_dir = if i == 0
+                           current_dir
+                         else
+                           prev = @node_path[i-1]
+                           if (node.x - prev.x).abs < (node.y - prev.y).abs
+                             node.y > prev.y ? GSDL::Direction::South : GSDL::Direction::North
+                           else
+                             node.x > prev.x ? GSDL::Direction::East : GSDL::Direction::West
+                           end
+                         end
+          
+          # 2. Exit direction (to reach next node)
+          if i < @node_path.size - 1
+            nxt = @node_path[i+1]
+            exit_dir = if (nxt.x - node.x).abs < (nxt.y - node.y).abs
+                         nxt.y > node.y ? GSDL::Direction::South : GSDL::Direction::North
                        else
-                         nxt.x > curr.x ? GSDL::Direction::East : GSDL::Direction::West
+                         nxt.x > node.x ? GSDL::Direction::East : GSDL::Direction::West
                        end
-
-          action = determine_action(current_dir, needed_dir)
-          @path << action
-          current_dir = needed_dir
+            
+            action = determine_action(entrance_dir, exit_dir)
+            @path << action
+            action_logs << "#{action} at [#{node.x.to_i},#{node.y.to_i}]"
+          end
         end
       end
 
       @next_action = @path.shift? || IntersectionAction::Straight
+
+      if priority?
+        puts "Priority #{asset_prefix} Path Generated:"
+        puts "  Spawn: #{x.to_i}, #{y.to_i} (Tile: #{(x/TileSize).to_i}, #{(y/TileSize).to_i})"
+        puts "  Target: #{target.type} at #{target.x}, #{target.y}"
+        puts "  Nodes: #{@node_path.map(&.type).join(" -> ")}"
+        puts "  Actions: #{action_logs.join(" -> ")}"
+        puts "  Current Action: [#{@next_action}] | Queue: #{@path.to_a.join(", ")}"
+      end
     end
 
     def draw_path(draw : GSDL::Draw, intersections : Array(Intersection))
@@ -465,9 +514,9 @@ module Traffic
 
       unless @waiting
         # Final Approach Homing for Priority Vehicles
-        if priority? && @node_path.empty? && (target = @target_node)
+        if priority? && (target = @target_node) && !target.type.exit?
           dist = distance_to(target.x, target.y)
-          if dist < 128.0_f32
+          if dist < 1.5_f32 * TileSize
             # Perpendicular homing to handle off-lane target nodes
             home_speed = 100.0_f32 * dt
             case self.direction
@@ -482,10 +531,10 @@ module Traffic
                 self.y += (diff > 0 ? home_speed : -home_speed)
               end
             end
-          end
-        end
+            end
+            end
 
-        target_speed = @next_action.straight? ? @original_speed : @original_speed * 0.5_f32
+            target_speed = @next_action.straight? ? @original_speed : @original_speed * 0.5_f32
         if @speed < target_speed
           @speed += 400.0_f32 * dt; @speed = target_speed if @speed > target_speed
         elsif @speed > target_speed
@@ -766,7 +815,8 @@ module Traffic
     def target_reached? : Bool
       return false unless target = @target_node
       # Threshold: must be very close to the target node
-      distance_to(target.x, target.y) < 4.0_f32
+      # Using 16.0 to be robust against high speeds (up to 9px/frame at 60fps)
+      distance_to(target.x, target.y) < 16.0_f32
     end
 
     def off_screen?(map_width : Int32 | Float32, map_height : Int32 | Float32)

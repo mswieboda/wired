@@ -45,12 +45,68 @@ module Traffic
 
       targets = graph.nodes.select { |n| n.type == type_node }
 
-      # Fallback to random exit if no specific target found or 30% of the time
-      if targets.empty? || Random.rand < 0.3
-        targets = graph.nodes.select(&.type.exit?)
+      # Filter targets based on accessibility from the correct side of the road
+      valid_targets = targets.select do |target|
+        # Simulate finding the closest start node to our vehicle
+        start_node = graph.nodes.select do |node|
+          case self.direction
+          when .east?  then node.x > self.x && (node.y - self.y).abs < TileSize
+          when .west?  then node.x < self.x && (node.y - self.y).abs < TileSize
+          when .north? then node.y < self.y && (node.x - self.x).abs < TileSize
+          when .south? then node.y > self.y && (node.x - self.x).abs < TileSize
+          else false
+          end
+        end.min_by? { |node| node.distance_to(self.x.to_f32, self.y.to_f32) }
+
+        if start_node
+          path = Pathfinder.find_path(start_node, target)
+          unless path.empty?
+            # Determine the final approach direction
+            final_approach_dir = if path.size >= 2
+                                   prev = path[-2]
+                                   curr = path[-1]
+                                   if (curr.x - prev.x).abs < (curr.y - prev.y).abs
+                                     curr.y > prev.y ? GSDL::Direction::South : GSDL::Direction::North
+                                   else
+                                     curr.x > prev.x ? GSDL::Direction::East : GSDL::Direction::West
+                                   end
+                                 else
+                                   self.direction
+                                 end
+
+            # Check if the final approach direction matches the required side of the road
+            is_valid = if target.sprite_offset_y < 0.0_f32
+                         final_approach_dir.west?
+                       elsif target.sprite_offset_y > 0.0_f32
+                         final_approach_dir.east?
+                       elsif target.sprite_offset_x < 0.0_f32
+                         final_approach_dir.south?
+                       elsif target.sprite_offset_x > 0.0_f32
+                         final_approach_dir.north?
+                       else
+                         true # No strict offset requirement
+                       end
+
+            puts "Target #{target.type} accessibility check: #{is_valid} (Approach: #{final_approach_dir})"
+            is_valid
+          else
+            puts "Target #{target.type} rejected: No path found"
+            false
+          end
+        else
+          puts "Target #{target.type} rejected: No start node in front"
+          false
+        end
       end
 
-      @target_node = targets.empty? ? nil : targets.sample
+      # Fallback to random exit if no valid specific target found
+      if valid_targets.empty?
+        puts "Priority vehicle #{@type} falling back to random Exit"
+        valid_targets = graph.nodes.select(&.type.exit?)
+      end
+
+      @target_node = valid_targets.empty? ? nil : valid_targets.sample
+      puts "Priority vehicle #{@type} selected target: #{@target_node.try(&.type)} at #{@target_node.try(&.x)}, #{@target_node.try(&.y)}"
     end
 
     def asset_prefix : String

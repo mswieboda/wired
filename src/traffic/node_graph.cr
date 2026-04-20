@@ -80,7 +80,7 @@ module Traffic
 
       # puts "NodeGraph: Built #{@nodes.size} nodes."
 
-      # 4. Connect Nodes
+      # 4. Connect Nodes (Only if directly adjacent)
       conn_count = 0
       @nodes.each do |node_a|
         @nodes.each do |node_b|
@@ -88,9 +88,34 @@ module Traffic
           next if node_a.connections.includes?(node_b)
 
           if connected_by_road?(map, node_a, node_b)
-            node_a.connections << node_b
-            node_b.connections << node_a # Assuming two-way roads for now
-            conn_count += 1
+            # CHECK: Is there any other node between A and B?
+            has_node_between = @nodes.any? do |node_mid|
+              next if node_mid == node_a || node_mid == node_b
+              
+              # Is node_mid on the line between A and B?
+              on_line = false
+              dx_ab = (node_a.x - node_b.x).abs
+              dy_ab = (node_a.y - node_b.y).abs
+              
+              if dx_ab < 5.0 # Vertical road
+                if (node_mid.x - node_a.x).abs < 5.0
+                  min_y, max_y = {node_a.y, node_b.y}.minmax
+                  on_line = node_mid.y > min_y && node_mid.y < max_y
+                end
+              elsif dy_ab < 5.0 # Horizontal road
+                if (node_mid.y - node_a.y).abs < 5.0
+                  min_x, max_x = {node_a.x, node_b.x}.minmax
+                  on_line = node_mid.x > min_x && node_mid.x < max_x
+                end
+              end
+              on_line
+            end
+
+            unless has_node_between
+              node_a.connections << node_b
+              node_b.connections << node_a # Assuming two-way roads for now
+              conn_count += 1
+            end
           end
         end
       end
@@ -117,23 +142,27 @@ module Traffic
 
       if dx < threshold
         # Vertical connection
+        mid_x = (a.x + b.x) / 2.0_f32
         min_y = Math.min(a.y, b.y)
         max_y = Math.max(a.y, b.y)
-        # Scan along Y
-        y = min_y + TileSize
-        while y < max_y
-          return false unless is_road_at?(map, a.x, y)
+        # Scan along Y, clamping to map boundaries
+        y = Math.max(0.0_f32, min_y + TileSize)
+        limit = Math.min(map.height.to_f32 - 1.0_f32, max_y)
+        while y < limit
+          return false unless is_road_at?(map, mid_x, y)
           y += TileSize
         end
         return true
       elsif dy < threshold
         # Horizontal connection
+        mid_y = (a.y + b.y) / 2.0_f32
         min_x = Math.min(a.x, b.x)
         max_x = Math.max(a.x, b.x)
-        # Scan along X
-        x = min_x + TileSize
-        while x < max_x
-          return false unless is_road_at?(map, x, a.y)
+        # Scan along X, clamping to map boundaries
+        x = Math.max(0.0_f32, min_x + TileSize)
+        limit = Math.min(map.width.to_f32 - 1.0_f32, max_x)
+        while x < limit
+          return false unless is_road_at?(map, x, mid_y)
           x += TileSize
         end
         return true

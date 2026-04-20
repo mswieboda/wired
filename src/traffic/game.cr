@@ -114,6 +114,12 @@ module Traffic
         {"police-station", "gfx/police-station.png"},
         # (using placeholders)
         {"penthouse", "gfx/traffic-signal-sb.png"},
+
+        # UI HUD
+        {"ambulance-ui", "gfx/ambulance-ui.png"},
+        {"ambulance-ui-strikes", "gfx/ambulance-ui-strikes.png"},
+        {"cop-ui", "gfx/cop-ui.png"},
+        {"cop-ui-strikes", "gfx/cop-ui-strikes.png"},
       ]
     end
 

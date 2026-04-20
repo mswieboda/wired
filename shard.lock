@@ -2,7 +2,7 @@ version: 2.0
 shards:
   game_sdl:
     git: https://github.com/mswieboda/game_sdl.git
-    version: 0.102.1
+    version: 0.102.2
 
   sdl3:
     git: https://github.com/mswieboda/sdl3.cr.git

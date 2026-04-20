@@ -12,6 +12,9 @@ module Traffic
     @spawn_interval_min : Float32 = 0.25
     @spawn_interval_max : Float32 = 1.0
 
+    @ambulance_ui_strikes : GSDL::AnimatedSprite
+    @cop_ui_strikes : GSDL::AnimatedSprite
+
     def initialize
       super(:main_menu)
 
@@ -65,8 +68,8 @@ module Traffic
       hud = GSDL::HUD.new
 
       text_data_template = "Total: {total_escorted}\n" \
-        "<c:red>A</c>: {ambulances} <c:red>X</c>: {ambulances_x}/3\n" \
-        "<c:blue>P</c>: {police} <c:red>X</c>: {police_x}/3"
+        "<c:red>A</c>: {ambulances}\n" \
+        "<c:blue>P</c>: {police}"
       hud << GSDL::HUDText.new(
         text_data_template: text_data_template,
         anchor: GSDL::Anchor::TopRight,
@@ -85,6 +88,39 @@ module Traffic
         color: GSDL::ColorScheme.get(:hud_main),
         align: GSDL::Font::Align::Right
       )
+
+      # UI icon for ambulance
+      @ambulance_ui = GSDL::Sprite.new("ambulance-ui", origin: {1_f32, 1_f32})
+      @ambulance_ui.draw_relative_to_camera = false
+      @ambulance_ui.x = Game.width - 8
+      @ambulance_ui.y = 112
+      @ambulance_ui.z_index = 150
+
+      # UI XXX for ambulance
+      @ambulance_ui_strikes = GSDL::AnimatedSprite.new("ambulance-ui-strikes", 64, 32, origin: {1_f32, 1_f32})
+      @ambulance_ui_strikes.draw_relative_to_camera = false
+      @ambulance_ui_strikes.x = @ambulance_ui.x
+      @ambulance_ui_strikes.y = @ambulance_ui.y
+      @ambulance_ui_strikes.z_index = @ambulance_ui.z_index + 3
+      @ambulance_ui_strikes.add("xxx", [0, 1, 2, 3], fps: 0)
+      @ambulance_ui_strikes.play("xxx")
+
+      # UI icon for cop
+      @cop_ui = GSDL::Sprite.new("cop-ui", origin: {1_f32, 0_f32})
+      @cop_ui.draw_relative_to_camera = false
+      @cop_ui.x = Game.width - 8
+      @cop_ui.y = @ambulance_ui.y + 8
+      @cop_ui.z_index = 150
+
+      # UI XXX for cop
+      @cop_ui_strikes = GSDL::AnimatedSprite.new("cop-ui-strikes", 64, 32, origin: {1_f32, 0_f32})
+      @cop_ui_strikes.draw_relative_to_camera = false
+      @cop_ui_strikes.x = @cop_ui.x
+      @cop_ui_strikes.y = @cop_ui.y
+      @cop_ui_strikes.z_index = @cop_ui.z_index + 3
+      @cop_ui_strikes.add("xxx", [0, 1, 2, 3], fps: 0)
+      @cop_ui_strikes.play("xxx")
+
       self.hud = hud
     end
 
@@ -199,13 +235,21 @@ module Traffic
             case vehicle.type
             when .ambulance?
               if vehicle.late_to_target?
-                GSDL::Data.increment("ambulances_x", 1)
+                xs = GSDL::Data.get("ambulances_x").as_i
+                xs += 1
+                xs = [xs, 3].min
+                GSDL::Data.set("ambulances_x", xs)
+                @ambulance_ui_strikes.as(GSDL::AnimatedSprite).frame_index = xs
               else
                 GSDL::Data.increment("ambulances", 1)
               end
             when .police?
               if vehicle.late_to_target?
-                GSDL::Data.increment("police_x", 1)
+                xs = GSDL::Data.get("police_x").as_i
+                xs += 1
+                xs = [xs, 3].min
+                GSDL::Data.set("police_x", xs)
+                @ambulance_ui_strikes.as(GSDL::AnimatedSprite).frame_index = xs
               else
                 GSDL::Data.increment("police", 1)
               end
@@ -284,8 +328,18 @@ module Traffic
       # 4. Draw Black border around map
       draw_black_border_past_map(draw)
 
+      draw_manual_hud_ui(draw)
+
       # manually draw HUD
       hud.try &.draw(draw)
+    end
+
+    def draw_manual_hud_ui(draw : GSDL::Draw)
+      @ambulance_ui.draw(draw)
+      @cop_ui.draw(draw)
+
+      @ambulance_ui_strikes.draw(draw)
+      @cop_ui_strikes.draw(draw)
     end
 
     def draw_debug_graph(draw : GSDL::Draw)

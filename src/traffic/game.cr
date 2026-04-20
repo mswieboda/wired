@@ -9,8 +9,8 @@ module Traffic
     def initialize
       super(
         title: "Traffic",
-        logical_width: 1280,
-        logical_height: 768,
+        # logical_width: 1280,
+        # logical_height: 768,
         fullscreen: true,
       )
 

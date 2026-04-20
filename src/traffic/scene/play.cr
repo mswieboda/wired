@@ -211,12 +211,12 @@ module Traffic
 
       # Safety check: do not spawn if overlapping another vehicle
       if new_vehicle.target_node && @vehicles.none?(&.collides?(new_vehicle))
-        if new_vehicle.path.empty? && !new_vehicle.target_reached?
-           puts "Vehicle spawned with no path and not at target! (Target: #{new_vehicle.target_node.try(&.type)})"
-        end
+        # if new_vehicle.path.empty? && !new_vehicle.target_reached?
+        #    puts "Vehicle spawned with no path and not at target! (Target: #{new_vehicle.target_node.try(&.type)})"
+        # end
         @vehicles << new_vehicle
-      else
-        puts "Vehicle failed to spawn: No target or collision detected. (Target: #{new_vehicle.target_node.try(&.type)})"
+      # else
+      #   puts "Vehicle failed to spawn: No target or collision detected. (Target: #{new_vehicle.target_node.try(&.type)})"
       end
     end
 
@@ -232,7 +232,7 @@ module Traffic
       @intersections.each(&.draw(draw))
       @target_areas.each(&.draw(draw))
 
-      draw_debug_graph(draw) # Uncomment to see nodes and connections
+      # draw_debug_graph(draw) # Uncomment to see nodes and connections
 
       # 3. Draw vehicles
       if selected = @selected_vehicle

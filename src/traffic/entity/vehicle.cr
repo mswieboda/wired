@@ -43,8 +43,8 @@ module Traffic
     @direction : GSDL::Direction = GSDL::Direction::East
     @hovered : Bool = false
     @homing_park : Bool = false
-    @log_waiting_lane : Bool = false
-    @log_arrival : Bool = false
+    # @log_waiting_lane : Bool = false
+    # @log_arrival : Bool = false
 
     @sprite_eb_body : GSDL::Sprite
     @sprite_wb_body : GSDL::Sprite
@@ -272,9 +272,9 @@ module Traffic
       end.min_by? { |node| node.distance_to(self.x.to_f32, self.y.to_f32) }
 
       unless start_node
-        if priority?
-          puts "Priority #{asset_prefix} failed to find start node! (Pos: #{x},#{y} Dir: #{direction})"
-        end
+        # if priority?
+        #   puts "Priority #{asset_prefix} failed to find start node! (Pos: #{x},#{y} Dir: #{direction})"
+        # end
         return
       end
 
@@ -282,9 +282,9 @@ module Traffic
       @node_path = Pathfinder.find_path(start_node, target)
 
       if @node_path.empty?
-        if priority?
-          puts "Priority #{asset_prefix} failed to find path to #{target.type}! (Start: #{start_node.type} at #{start_node.x},#{start_node.y})"
-        end
+        # if priority?
+        #   puts "Priority #{asset_prefix} failed to find path to #{target.type}! (Start: #{start_node.type} at #{start_node.x},#{start_node.y})"
+        # end
         return
       end
       # 3. Convert node sequence to IntersectionActions
@@ -298,7 +298,7 @@ module Traffic
                       start_node.x > self.x ? GSDL::Direction::East : GSDL::Direction::West
                     end
 
-      action_logs = [] of String
+      # action_logs = [] of String
 
       (0...@node_path.size).each do |i|
         node = @node_path[i]
@@ -331,21 +331,21 @@ module Traffic
             
             action = determine_action(entrance_dir, exit_dir)
             @path << action
-            action_logs << "#{action} at [#{node.x.to_i},#{node.y.to_i}]"
+            # action_logs << "#{action} at [#{node.x.to_i},#{node.y.to_i}]"
           end
         end
       end
 
       @next_action = @path.shift? || IntersectionAction::Straight
 
-      if priority?
-        puts "Priority #{asset_prefix} Path Generated:"
-        puts "  Spawn: #{x.to_i}, #{y.to_i} (Tile: #{(x/TileSize).to_i}, #{(y/TileSize).to_i})"
-        puts "  Target: #{target.type} at #{target.x}, #{target.y}"
-        puts "  Nodes: #{@node_path.map(&.type).join(" -> ")}"
-        puts "  Actions: #{action_logs.join(" -> ")}"
-        puts "  Current Action: [#{@next_action}] | Queue: #{@path.to_a.join(", ")}"
-      end
+      # if priority?
+      #   puts "Priority #{asset_prefix} Path Generated:"
+      #   puts "  Spawn: #{x.to_i}, #{y.to_i} (Tile: #{(x/TileSize).to_i}, #{(y/TileSize).to_i})"
+      #   puts "  Target: #{target.type} at #{target.x}, #{target.y}"
+      #   puts "  Nodes: #{@node_path.map(&.type).join(" -> ")}"
+      #   puts "  Actions: #{action_logs.join(" -> ")}"
+      #   puts "  Current Action: [#{@next_action}] | Queue: #{@path.to_a.join(", ")}"
+      # end
     end
 
     def draw_path(draw : GSDL::Draw, intersections : Array(Intersection))
@@ -498,7 +498,7 @@ module Traffic
            # Snap to exact target coordinates
            target = @target_node.not_nil!
            unless @target_wait_timer.running? || @target_wait_timer.done?
-             puts "Priority #{asset_prefix} ARRIVED at #{target.type}! (At: #{self.x.to_i},#{self.y.to_i}) Snapping to target: #{target.x}, #{target.y}"
+             # puts "Priority #{asset_prefix} ARRIVED at #{target.type}! (At: #{self.x.to_i},#{self.y.to_i}) Snapping to target: #{target.x}, #{target.y}"
              @target_wait_timer.start
            end
 
@@ -569,13 +569,13 @@ module Traffic
       # If more than 10px from target lane, let lane-switching handle it first
       unless @homing_park
         if (current_offset - req_offset).abs > 10.0_f32
-          unless @log_waiting_lane
-            puts "Priority #{asset_prefix} waiting for lane (At: #{self.x.to_i}, #{self.y.to_i}): Offset #{(current_offset - req_offset).abs.to_i}px away"
-            @log_waiting_lane = true
-          end
+          # unless @log_waiting_lane
+          #   puts "Priority #{asset_prefix} waiting for lane (At: #{self.x.to_i}, #{self.y.to_i}): Offset #{(current_offset - req_offset).abs.to_i}px away"
+          #   @log_waiting_lane = true
+          # end
           return
         else
-          puts "Priority #{asset_prefix} HANDOVER: Lane reached at #{self.x.to_i},#{self.y.to_i}. Starting parking homing to #{target.x.to_i},#{target.y.to_i}."
+          # puts "Priority #{asset_prefix} HANDOVER: Lane reached at #{self.x.to_i},#{self.y.to_i}. Starting parking homing to #{target.x.to_i},#{target.y.to_i}."
           @homing_park = true
           @lane_state = LaneState::Stable
         end
@@ -780,10 +780,10 @@ module Traffic
                    end
 
       if (current_offset - req_offset).abs > 5.0_f32
-        unless @log_waiting_lane
-          puts "Priority #{asset_prefix} switching lane (At: #{self.x.to_i}, #{self.y.to_i}): Dist to Target #{target_dist.to_i}"
-          @log_waiting_lane = true
-        end
+        # unless @log_waiting_lane
+        #   puts "Priority #{asset_prefix} switching lane (At: #{self.x.to_i}, #{self.y.to_i}): Dist to Target #{target_dist.to_i}"
+        #   @log_waiting_lane = true
+        # end
         # Need to switch
         target_world = base_coord + req_offset
         aggressive = priority?
@@ -984,10 +984,10 @@ module Traffic
       arrival_threshold = priority? && !target.type.exit? ? 8.0_f32 : 32.0_f32
 
       if dist < arrival_threshold
-        unless @log_arrival
-          puts "Priority #{asset_prefix} reached target via PROXIMITY (At: #{self.x.to_i}, #{self.y.to_i}) (Dist: #{dist.to_i})"
-          @log_arrival = true
-        end
+        # unless @log_arrival
+        #   puts "Priority #{asset_prefix} reached target via PROXIMITY (At: #{self.x.to_i}, #{self.y.to_i}) (Dist: #{dist.to_i})"
+        #   @log_arrival = true
+        # end
         return true
       end
 
@@ -1000,22 +1000,22 @@ module Traffic
         case self.direction
         when .up?    
           if self.y < target.y - 10.0_f32 && (self.x - target.x).abs < perpendicular_threshold
-            puts "Priority #{asset_prefix} reached target via OVERSHOOT (UP) (At: #{self.x.to_i}, #{self.y.to_i})"
+            # puts "Priority #{asset_prefix} reached target via OVERSHOOT (UP) (At: #{self.x.to_i}, #{self.y.to_i})"
             return true
           end
         when .down?  
           if self.y > target.y + 10.0_f32 && (self.x - target.x).abs < perpendicular_threshold
-            puts "Priority #{asset_prefix} reached target via OVERSHOOT (DOWN) (At: #{self.x.to_i}, #{self.y.to_i})"
+            # puts "Priority #{asset_prefix} reached target via OVERSHOOT (DOWN) (At: #{self.x.to_i}, #{self.y.to_i})"
             return true
           end
         when .left?  
           if self.x < target.x - 10.0_f32 && (self.y - target.y).abs < perpendicular_threshold
-            puts "Priority #{asset_prefix} reached target via OVERSHOOT (LEFT) (At: #{self.x.to_i}, #{self.y.to_i})"
+            # puts "Priority #{asset_prefix} reached target via OVERSHOOT (LEFT) (At: #{self.x.to_i}, #{self.y.to_i})"
             return true
           end
         when .right? 
           if self.x > target.x + 10.0_f32 && (self.y - target.y).abs < perpendicular_threshold
-            puts "Priority #{asset_prefix} reached target via OVERSHOOT (RIGHT) (At: #{self.x.to_i}, #{self.y.to_i})"
+            # puts "Priority #{asset_prefix} reached target via OVERSHOOT (RIGHT) (At: #{self.x.to_i}, #{self.y.to_i})"
             return true
           end
         end

@@ -280,19 +280,19 @@ module Traffic
       @input_consumed = true
       case @state
       when .green_ns?
-        puts "Forcing NS Yellow..."
+        # puts "Forcing NS Yellow..."
         @state = IntersectionSignal::YellowNS
         @state_timer.duration = YellowDuration.seconds
       when .green_ns_left?
-        puts "Forcing NS Left Yellow..."
+        # puts "Forcing NS Left Yellow..."
         @state = IntersectionSignal::YellowNSLeft
         @state_timer.duration = YellowDuration.seconds
       when .green_ew?
-        puts "Forcing EW Yellow..."
+        # puts "Forcing EW Yellow..."
         @state = IntersectionSignal::YellowEW
         @state_timer.duration = YellowDuration.seconds
       when .green_ew_left?
-        puts "Forcing EW Left Yellow..."
+        # puts "Forcing EW Left Yellow..."
         @state = IntersectionSignal::YellowEWLeft
         @state_timer.duration = YellowDuration.seconds
       else

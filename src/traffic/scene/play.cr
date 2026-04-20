@@ -193,7 +193,7 @@ module Traffic
     end
 
     private def spawn_vehicle
-      is_priority = Random.rand < 0.7
+      is_priority = Random.rand < 0.1
 
       return if @spawn_points.empty?
       dir, sx, sy = @spawn_points.sample

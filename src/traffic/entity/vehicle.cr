@@ -43,6 +43,8 @@ module Traffic
     @direction : GSDL::Direction = GSDL::Direction::East
     @hovered : Bool = false
     @homing_park : Bool = false
+    @log_waiting_lane : Bool = false
+    @log_arrival : Bool = false
 
     @sprite_eb_body : GSDL::Sprite
     @sprite_wb_body : GSDL::Sprite
@@ -254,13 +256,17 @@ module Traffic
       @homing_park = false
       return unless target = @target_node
 
-      # 1. Find the nearest node in front of us to start the path
+      # 1. Find the nearest node to start the path
+      # We look for nodes in front of us, or VERY close to us (on our current tile)
       start_node = graph.nodes.select do |node|
+        dist = node.distance_to(self.x.to_f32, self.y.to_f32)
+        next true if dist < 16.0_f32 # Very close (on same spot)
+
         case self.direction
-        when .east?  then node.x > self.x && (node.y - self.y).abs < TileSize
-        when .west?  then node.x < self.x && (node.y - self.y).abs < TileSize
-        when .north? then node.y < self.y && (node.x - self.x).abs < TileSize
-        when .south? then node.y > self.y && (node.x - self.x).abs < TileSize
+        when .east?  then node.x > self.x - 10.0_f32 && (node.y - self.y).abs < TileSize
+        when .west?  then node.x < self.x + 10.0_f32 && (node.y - self.y).abs < TileSize
+        when .north? then node.y < self.y + 10.0_f32 && (node.x - self.x).abs < TileSize
+        when .south? then node.y > self.y - 10.0_f32 && (node.x - self.x).abs < TileSize
         else false
         end
       end.min_by? { |node| node.distance_to(self.x.to_f32, self.y.to_f32) }
@@ -462,6 +468,7 @@ module Traffic
       check_forward_halting(all_vehicles)
 
       unless @waiting
+        check_node_arrival
         update_lane_switching(dt, map, intersections, all_vehicles)
         check_intersections(intersections)
         handle_turns(intersections, all_vehicles)
@@ -542,8 +549,14 @@ module Traffic
     private def apply_parking_homing(dt : Float32, map : GSDL::TileMap, all_vehicles : Array(Vehicle))
       return unless priority? && (target = @target_node) && !target.type.exit?
 
+      # Path-Aware Check: Only home if we have cleared all intermediate intersections
+      unless @node_path.size <= 1
+        return
+      end
+
       dist = distance_to(target.x, target.y)
-      return unless dist < 2.0_f32 * TileSize
+      # Delay homing until closer to the target
+      return unless dist < 1.2_f32 * TileSize
 
       # 1. Ensure we are in the correct lane before homing
       base_coord = find_road_base_coord(map)
@@ -556,6 +569,10 @@ module Traffic
       # If more than 10px from target lane, let lane-switching handle it first
       unless @homing_park
         if (current_offset - req_offset).abs > 10.0_f32
+          unless @log_waiting_lane
+            puts "Priority #{asset_prefix} waiting for lane (At: #{self.x.to_i}, #{self.y.to_i}): Offset #{(current_offset - req_offset).abs.to_i}px away"
+            @log_waiting_lane = true
+          end
           return
         else
           puts "Priority #{asset_prefix} HANDOVER: Lane reached at #{self.x.to_i},#{self.y.to_i}. Starting parking homing to #{target.x.to_i},#{target.y.to_i}."
@@ -612,17 +629,26 @@ module Traffic
           self.y += (diff > 0 ? home_speed : -home_speed)
         end
       end
-
-      # puts "Priority #{asset_prefix} Homing: Dist: #{dist.to_i}, Offset: #{current_offset.to_i} -> Target: #{target.x.to_i},#{target.y.to_i}"
     end
 
     private def update_physics(dt : Float32)
       # Parking Brake: Slow down significantly when close to the target
-      parking_zone = 2.0_f32 * TileSize
-      is_parking = priority? && (target = @target_node) && !target.type.exit? && distance_to(target.x, target.y) < parking_zone
+      parking_zone = 1.2_f32 * TileSize
+      is_parking = priority? && (target = @target_node) && !target.type.exit? && distance_to(target.x, target.y) < parking_zone && @node_path.size <= 1
+
+      # NEW: Stop forward movement if we have already crossed the target's travel line
+      overshot_travel = false
+      if is_parking && (t = target)
+        case self.direction
+        when .north? then overshot_travel = self.y <= t.y
+        when .south? then overshot_travel = self.y >= t.y
+        when .east?  then overshot_travel = self.x >= t.x
+        when .west?  then overshot_travel = self.x <= t.x
+        end
+      end
 
       base_target_speed = @next_action.straight? ? @original_speed : @original_speed * 0.5_f32
-      target_speed = is_parking ? 120.0_f32 : base_target_speed
+      target_speed = is_parking ? (overshot_travel ? 0.0_f32 : 120.0_f32) : base_target_speed
 
       if @speed < target_speed
         @speed += 400.0_f32 * dt
@@ -663,6 +689,7 @@ module Traffic
       self.x += dx * @speed * dt
       self.y += dy * @speed * dt
     end
+
     private def update_animation_state
       is_braking = @waiting || @speed < @original_speed * 0.8
       is_blinking_left = @next_action.left?
@@ -735,14 +762,9 @@ module Traffic
 
       # Trigger logic:
       # - Intersections require being within SwitchZoneDist.
-      # - Building destinations (priority only) trigger immediately once on the final segment 
-      #   (no more intersections between us and the target).
+      # - Building destinations (priority only) trigger within SwitchZoneDist ONLY on final segment
       dist = Math.min(inter_dist, target_dist)
-      is_final_segment = (target_dist < 9000.0_f32) && (target_dist < inter_dist)
-
-      unless is_final_segment
-        return if dist > SwitchZoneDist || dist < 0
-      end
+      return if dist > SwitchZoneDist || dist < 0
 
       # Dynamic base_coord for any map
       base_coord = find_road_base_coord(map)
@@ -758,10 +780,13 @@ module Traffic
                    end
 
       if (current_offset - req_offset).abs > 5.0_f32
+        unless @log_waiting_lane
+          puts "Priority #{asset_prefix} switching lane (At: #{self.x.to_i}, #{self.y.to_i}): Dist to Target #{target_dist.to_i}"
+          @log_waiting_lane = true
+        end
         # Need to switch
         target_world = base_coord + req_offset
         aggressive = priority?
-
         if @lane_state.yielding? || aggressive
           if !aggressive && @yield_timer.done?
             # Timeout: cancel turn and recalculate
@@ -931,21 +956,68 @@ module Traffic
       end
     end
 
+    private def check_node_arrival
+      return if @node_path.empty?
+      
+      node = @node_path[0]
+      # If we are close to the current node and it's not an intersection (intersections handled by handle_turns)
+      # or if we are already past it.
+      if !node.type.intersection?
+        dist = distance_to(node.x, node.y)
+        if dist < 32.0_f32
+          @node_path.shift?
+        end
+      end
+    end
+
     def target_reached? : Bool
       return false unless target = @target_node
       dist = distance_to(target.x, target.y)
 
+      # Only allow arrival at specific targets if we are on the final path segment
+      unless target.type.exit?
+        return false unless @node_path.size <= 1
+      end
+
       # 1. Close enough check
-      # Using 32.0 to be robust against high speeds (up to 9px/frame at 60fps)
-      return true if dist < 32.0_f32
+      # Priority vehicles need to be MUCH closer to "arrive" so they finish homing
+      arrival_threshold = priority? && !target.type.exit? ? 8.0_f32 : 32.0_f32
+
+      if dist < arrival_threshold
+        unless @log_arrival
+          puts "Priority #{asset_prefix} reached target via PROXIMITY (At: #{self.x.to_i}, #{self.y.to_i}) (Dist: #{dist.to_i})"
+          @log_arrival = true
+        end
+        return true
+      end
 
       # 2. Overshoot check: If we are parking and our direction means we've already passed it
+      # CRITICAL: We also check perpendicular distance to ensure we don't trigger "arrival" 
+      # from a parallel road or the wrong lane.
+      perpendicular_threshold = 12.0_f32 # Tighten to ensure we are at the curb before arrival
+
       if priority? && !target.type.exit?
         case self.direction
-        when .up?    then return true if self.y < target.y - 10.0_f32
-        when .down?  then return true if self.y > target.y + 10.0_f32
-        when .left?  then return true if self.x < target.x - 10.0_f32
-        when .right? then return true if self.x > target.x + 10.0_f32
+        when .up?    
+          if self.y < target.y - 10.0_f32 && (self.x - target.x).abs < perpendicular_threshold
+            puts "Priority #{asset_prefix} reached target via OVERSHOOT (UP) (At: #{self.x.to_i}, #{self.y.to_i})"
+            return true
+          end
+        when .down?  
+          if self.y > target.y + 10.0_f32 && (self.x - target.x).abs < perpendicular_threshold
+            puts "Priority #{asset_prefix} reached target via OVERSHOOT (DOWN) (At: #{self.x.to_i}, #{self.y.to_i})"
+            return true
+          end
+        when .left?  
+          if self.x < target.x - 10.0_f32 && (self.y - target.y).abs < perpendicular_threshold
+            puts "Priority #{asset_prefix} reached target via OVERSHOOT (LEFT) (At: #{self.x.to_i}, #{self.y.to_i})"
+            return true
+          end
+        when .right? 
+          if self.x > target.x + 10.0_f32 && (self.y - target.y).abs < perpendicular_threshold
+            puts "Priority #{asset_prefix} reached target via OVERSHOOT (RIGHT) (At: #{self.x.to_i}, #{self.y.to_i})"
+            return true
+          end
         end
       end
 

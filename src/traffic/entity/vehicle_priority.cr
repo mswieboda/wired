@@ -49,11 +49,14 @@ module Traffic
       valid_targets = targets.select do |target|
         # Simulate finding the closest start node to our vehicle
         start_node = graph.nodes.select do |node|
+          dist = node.distance_to(self.x.to_f32, self.y.to_f32)
+          next true if dist < 16.0_f32 # Very close (on same spot)
+
           case self.direction
-          when .east?  then node.x > self.x && (node.y - self.y).abs < TileSize
-          when .west?  then node.x < self.x && (node.y - self.y).abs < TileSize
-          when .north? then node.y < self.y && (node.x - self.x).abs < TileSize
-          when .south? then node.y > self.y && (node.x - self.x).abs < TileSize
+          when .east?  then node.x > self.x - 10.0_f32 && (node.y - self.y).abs < TileSize
+          when .west?  then node.x < self.x + 10.0_f32 && (node.y - self.y).abs < TileSize
+          when .north? then node.y < self.y + 10.0_f32 && (node.x - self.x).abs < TileSize
+          when .south? then node.y > self.y - 10.0_f32 && (node.x - self.x).abs < TileSize
           else false
           end
         end.min_by? { |node| node.distance_to(self.x.to_f32, self.y.to_f32) }

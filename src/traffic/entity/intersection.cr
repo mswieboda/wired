@@ -35,6 +35,11 @@ module Traffic
     @flip_button : GSDL::Button
     @next_button : GSDL::Button
 
+    @flipped : Bool = false
+    @flipped_to_left : Bool = false
+    getter? input_consumed : Bool = false
+    getter? flip_disabled : Bool = false
+
     def initialize(@tile_x, @tile_y)
       @x = @tile_x * TileSize
       @y = @tile_y * TileSize
@@ -80,7 +85,7 @@ module Traffic
 
       # Buttons
       @flip_button = GSDL::Button.new(
-        on_click: ->(s : String) { puts ">>> FLIP!" },
+        on_click: ->(s : String) { flip },
         font: GSDL::Font.default(48.0_f32),
         text: "FLIP",
         x: GSDL::Game.width,
@@ -119,6 +124,8 @@ module Traffic
     end
 
     def update(dt : Float32)
+      @input_consumed = false
+      @flip_disabled = false
       return unless super(dt)
 
       if selected?
@@ -140,14 +147,25 @@ module Traffic
         @next_button.update(dt)
       end
 
+      update_auto_signal
+
+      true
+    end
+
+    def update_auto_signal
       if @state_timer.done?
         case @state
         when .green_ns_left?
           @state = IntersectionSignal::YellowNSLeft
           @state_timer.duration = YellowDuration.seconds
         when .yellow_ns_left?
-          @state = IntersectionSignal::GreenNS
-          @state_timer.duration = GreenDuration.seconds
+          if @flipped
+            @state = IntersectionSignal::AllRedNS
+            @state_timer.duration = RedDuration.seconds
+          else
+            @state = IntersectionSignal::GreenNS
+            @state_timer.duration = GreenDuration.seconds
+          end
         when .green_ns?
           @state = IntersectionSignal::YellowNS
           @state_timer.duration = YellowDuration.seconds
@@ -155,14 +173,30 @@ module Traffic
           @state = IntersectionSignal::AllRedNS
           @state_timer.duration = RedDuration.seconds
         when .all_red_ns?
-          @state = IntersectionSignal::GreenEWLeft
-          @state_timer.duration = GreenLeftDuration.seconds
+          if @flipped
+            if @flipped_to_left
+              @state = IntersectionSignal::GreenEWLeft
+              @state_timer.duration = GreenLeftDuration.seconds
+            else
+              @state = IntersectionSignal::GreenEW
+              @state_timer.duration = GreenDuration.seconds
+            end
+            @flipped = false
+          else
+            @state = IntersectionSignal::GreenEWLeft
+            @state_timer.duration = GreenLeftDuration.seconds
+          end
         when .green_ew_left?
           @state = IntersectionSignal::YellowEWLeft
           @state_timer.duration = YellowDuration.seconds
         when .yellow_ew_left?
-          @state = IntersectionSignal::GreenEW
-          @state_timer.duration = GreenDuration.seconds
+          if @flipped
+            @state = IntersectionSignal::AllRedEW
+            @state_timer.duration = RedDuration.seconds
+          else
+            @state = IntersectionSignal::GreenEW
+            @state_timer.duration = GreenDuration.seconds
+          end
         when .green_ew?
           @state = IntersectionSignal::YellowEW
           @state_timer.duration = YellowDuration.seconds
@@ -170,14 +204,24 @@ module Traffic
           @state = IntersectionSignal::AllRedEW
           @state_timer.duration = RedDuration.seconds
         when .all_red_ew?
-          @state = IntersectionSignal::GreenNSLeft
-          @state_timer.duration = GreenLeftDuration.seconds
+          if @flipped
+            if @flipped_to_left
+              @state = IntersectionSignal::GreenNSLeft
+              @state_timer.duration = GreenLeftDuration.seconds
+            else
+              @state = IntersectionSignal::GreenNS
+              @state_timer.duration = GreenDuration.seconds
+            end
+            @flipped = false
+          else
+            @state = IntersectionSignal::GreenNSLeft
+            @state_timer.duration = GreenLeftDuration.seconds
+          end
         end
 
         @state_timer.restart
         update_signal_frames
       end
-      true
     end
 
     def update_signal_frames
@@ -233,6 +277,7 @@ module Traffic
     end
 
     def toggle
+      @input_consumed = true
       case @state
       when .green_ns?
         puts "Forcing NS Yellow..."
@@ -257,6 +302,53 @@ module Traffic
       GSDL::AudioManager.get("ding").play
       @state_timer.restart
       update_signal_frames
+      self.selected = false
+    end
+
+    def flip
+      @input_consumed = true
+      if @flipped || @state.yellow_ns? || @state.yellow_ns_left? || @state.yellow_ew? || @state.yellow_ew_left?
+        @flip_disabled = true
+        return
+      end
+
+      case @state
+      when .green_ns?
+        @state = IntersectionSignal::YellowNS
+        @state_timer.duration = YellowDuration.seconds
+        @flipped = true
+        @flipped_to_left = false
+      when .green_ns_left?
+        @state = IntersectionSignal::YellowNSLeft
+        @state_timer.duration = YellowDuration.seconds
+        @flipped = true
+        @flipped_to_left = true
+      when .green_ew?
+        @state = IntersectionSignal::YellowEW
+        @state_timer.duration = YellowDuration.seconds
+        @flipped = true
+        @flipped_to_left = false
+      when .green_ew_left?
+        @state = IntersectionSignal::YellowEWLeft
+        @state_timer.duration = YellowDuration.seconds
+        @flipped = true
+        @flipped_to_left = true
+      else
+        @flip_disabled = true
+        return # Ignore AllRedNS, AllRedEW or states already in transition
+      end
+
+      GSDL::AudioManager.get("ding").play
+      @state_timer.restart
+      update_signal_frames
+      self.selected = false
+    end
+
+    def clicked_any_button?(mx, my) : Bool
+      return false unless selected?
+      return true if GSDL::Mouse.in?(mx, my, @flip_button.screen_x, @flip_button.screen_y, @flip_button.screen_width, @flip_button.screen_height)
+      return true if GSDL::Mouse.in?(mx, my, @next_button.screen_x, @next_button.screen_y, @next_button.screen_width, @next_button.screen_height)
+      false
     end
 
     def clicked?(mx, my)

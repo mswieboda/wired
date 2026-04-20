@@ -113,7 +113,10 @@ module Traffic
 
         clicked_vehicle = @vehicles.find(&.clicked?(world_mx, world_my))
 
-        if clicked_vehicle
+        # Check if any HUD button consumed the click
+        if @intersections.any?(&.input_consumed?)
+          # HUD Button handled it
+        elsif clicked_vehicle
           if clicked_vehicle.wrecked?
             @vehicles.delete(clicked_vehicle)
             @selected_vehicle = nil if @selected_vehicle == clicked_vehicle
@@ -123,15 +126,18 @@ module Traffic
           end
         else
           clicked_intersection = @intersections.find(&.clicked?(world_mx, world_my))
-          if clicked_intersection
+          if clicked_intersection && !clicked_intersection.flip_disabled?
             if clicked_intersection.selected?
               clicked_intersection.toggle
+              clicked_intersection.selected = false
             else
               # Deselect others
               @intersections.each { |i| i.selected = false if i != clicked_intersection }
               clicked_intersection.selected = true
             end
             @selected_vehicle = nil
+          elsif clicked_intersection
+            # Flip/Action was disabled, keep selection
           else
             @intersections.each { |i| i.selected = false }
             @selected_vehicle = nil

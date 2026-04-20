@@ -302,7 +302,6 @@ module Traffic
       GSDL::AudioManager.get("ding").play
       @state_timer.restart
       update_signal_frames
-      self.selected = false
     end
 
     def flip
@@ -341,7 +340,6 @@ module Traffic
       GSDL::AudioManager.get("ding").play
       @state_timer.restart
       update_signal_frames
-      self.selected = false
     end
 
     def clicked_any_button?(mx, my) : Bool

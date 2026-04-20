@@ -129,7 +129,6 @@ module Traffic
           if clicked_intersection && !clicked_intersection.flip_disabled?
             if clicked_intersection.selected?
               clicked_intersection.toggle
-              clicked_intersection.selected = false
             else
               # Deselect others
               @intersections.each { |i| i.selected = false if i != clicked_intersection }
